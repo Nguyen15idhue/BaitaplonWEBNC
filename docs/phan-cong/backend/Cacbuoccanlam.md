@@ -4,6 +4,10 @@
 > Nguồn chốt: `KE-HOACH-HOAN-THIEN-TRAVELA.md` mục 2-8, 10-11.
 > Quy ước lỗi chuẩn mọi API: `{ "error": "CODE", "message": "..." }`. Mọi list trả `PagedResult { items, page, pageSize, total }`.
 
+> Quy tắc tracking API (bắt buộc): làm xong mỗi nhóm API ở bước nào thì cập nhật ngay
+> `docs/phan-cong/backend/api.md` — chuyển trạng thái endpoint đó thành Hoàn thành kèm
+> evidence và ngày. Chưa cập nhật api.md coi như bước đó chưa xong.
+
 ## Phân công gợi ý
 
 * **BE1:** B1 (DB nền) + B2 (Auth/Users/Audit/Health).
@@ -58,9 +62,9 @@
    - `POST /api/auth/refresh {refreshToken}` -> xoay vòng: revoke cũ, cấp cặp mới
    - `POST /api/auth/logout {refreshToken}` -> revoke
    - `GET /api/auth/me` -> UserDto (auth required)
-   - `GET /api/users?page&size&search` (Admin, search username/email)
+   - `GET /api/users?page&pageSize&search` (Admin, search username/email)
    - `PUT /api/users/{id}/role {role}`, `PUT /api/users/{id}/lock {locked}` (Admin)
-   - `GET /api/audit-logs?entityType&entityId&page&size` (Admin)
+   - `GET /api/audit-logs?entityType&entityId&page&pageSize` (Admin)
    - `GET /health` public `{ status, db, time }`
 3. `RefreshToken` lưu **hash** trong DB, raw chỉ trả 1 lần. Secret từ `JWT_SECRET` env.
 4. RBAC Default Deny: mọi controller mặc định `[Authorize]`, chỉ `register/login/refresh`, `GET /tours*`, `/health` là `[AllowAnonymous]`. `[Authorize(Roles="Admin")]` cho Users/Audit/POST-PUT-DELETE Tour.
@@ -84,7 +88,7 @@
 
 **Công việc:**
 1. `Services/DestinationService, TourService` + Controllers CRUD.
-2. `GET /api/tours?search&destinationId&minPrice&maxPrice&page&size&sort` -> `TourListDto { id, tourName, thumbnail, priceFrom, destination, status }`. `priceFrom` = min giá hiệu lực (`effective_date <= NOW` mới nhất mỗi source).
+2. `GET /api/tours?search&destinationId&minPrice&maxPrice&page&pageSize&sort` -> `TourListDto { id, tourName, thumbnail, priceFrom, destination, status }`. `priceFrom` = min giá hiệu lực (`effective_date <= NOW` mới nhất mỗi source).
 3. `GET /api/tours/{id}` -> `TourDetailDto` kèm `images` + `prices` hiệu lực.
 4. `POST/PUT /api/tours` validate: `tour_name required max 200`, `destination_id tồn tại`, `max_seats >0`, `status enum`. Xóa = chuyển `Hidden` nếu đã có booking.
 5. `GET /api/tours/{id}/prices`, `POST /api/tours/{id}/prices {source_name, price_value>0, effective_date}`, `PUT/DELETE /api/prices/{id}`.

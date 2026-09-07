@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) | BE2: chưa làm
-* Commit/nhánh: main, chưa commit/push skeleton (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-06 (B0 skeleton)
+* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) | BE2: chưa làm
+* Commit/nhánh: main, chưa commit/push B0 skeleton + B1 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (B0 re-verify + B1 xong)
 
 ---
 
@@ -36,7 +36,7 @@
 | `dotnet build` sạch | PASS | `Build succeeded, 0 Warning, 0 Error` | Đã fix lỗi `--no-restore` (NETSDK1064) bằng publish thường |
 | `GET /api/tours` placeholder | PASS | Cả `localhost:5000/api/tours` và `localhost:3001/api/tours` đều 200 PagedResult rỗng | Chứng minh FE->BE qua Nginx proxy đã thông |
 
-**Ghi chú nếu có:** Lần check trước B0 FAIL vì chưa có khung; lần này tạo skeleton nên PASS. Chưa push git. Không sang B1 khi chưa được bạn duyệt skeleton. Shadcn/Tailwind đầy đủ để dành F1.
+**Ghi chú nếu có:** Lần check trước B0 FAIL vì chưa có khung; lần skeleton PASS. Re-verify 2026-09-07 sau B1: vẫn PASS (swagger 200, tours placeholder 200, FE 200, health giờ `db=up`). Chưa push git. Shadcn/Tailwind đầy đủ để dành F1.
 
 ---
 
@@ -46,21 +46,26 @@
 
 | File | Hành động | Nội dung chính | Người | Trạng thái |
 |---|---|---|---|---|
-| `Models/*.cs` (9 files) | | | | ☐/☑ |
-| `Data/TravelaDbContext.cs` | | Quan hệ + Index + Restrict | | ☐/☑ |
-| `Migrations/*` | | InitialCreate | | ☐/☑ |
-| `Middleware/ExceptionMiddleware.cs` | | Lỗi chuẩn | | ☐/☑ |
+| `Models/` 9 files (User, Destination, Tour, Price, Image, Booking, Checkout, AuditLog, RefreshToken) | Tạo | POCO Entity, TrackingTrace dạng chuỗi JSON | agent (BE1) | ☑ |
+| `Data/TravelaDbContext.cs` | Tạo | 9 DbSet, bảng lowercase, utf8mb4, FK Restrict toàn bộ, unique username/email/token_hash/booking_id, đủ index B1.3 | agent (BE1) | ☑ |
+| `Data/DbSeeder.cs` | Tạo | Seed runtime khi DB trống: 3 users BCrypt, 10 destinations, 12 tours, 30 prices, 30 images, 5 bookings + 5 checkouts | agent (BE1) | ☑ |
+| `Migrations/*InitialCreate*` + snapshot | Tạo (dotnet-ef 9) | Schema 9 bảng, FK RESTRICT, index | agent (BE1) | ☑ |
+| `Middleware/ExceptionMiddleware.cs` (+ AppException) | Tạo | Lỗi chuẩn {error,message}, không stack trace | agent (BE1) | ☑ |
+| `DTOs/Common/PagedResult.cs`, `Helpers/PaginationHelper.cs` | Tạo | Chuẩn list + normalize page/size (max 50) | agent (BE1) | ☑ |
+| `Program.cs` | Sửa | DbContext Pomelo MySQL, auto Migrate+Seed khi khởi động, health check DB thật, CORS thêm localhost:3001 | agent (BE1) | ☑ |
+| `appsettings.json` | Sửa | ConnectionStrings DefaultConnection local `localhost:3307` (Docker override `Server=mysql` qua env) | agent (BE1) | ☑ |
+| `Travela.Api.csproj` | Sửa | Thêm Pomelo 9.0.0 (= EF Core 9), EF Design 9, BCrypt.Net-Next 4.2.0 | agent (BE1) | ☑ |
 
 ### Kết quả test
 
 | Checklist B1 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Migration fresh OK | | | |
-| Seed đủ (users/destinations/tours/...) | | Đếm rows: ... | |
-| Chặn cascade xóa Tour có Booking | | | |
-| Index đủ | | `SHOW INDEX` ... | |
+| Migration fresh OK | PASS | `down -v` rồi `up --build`: backend tự Migrate+Seed, `health=db:up`; `dotnet ef database update` từ host cũng Done | Pomelo 9 + EF 9 chạy trên net10.0 OK |
+| Seed đủ (users/destinations/tours/...) | PASS | users=3, destinations=10, tours=12, prices=30, images=30, bookings=5, checkouts=5 | Join tours-destinations-prices-images ra đúng |
+| Chặn cascade xóa Tour có Booking | PASS | `DELETE tours Id=1` báo `ERROR 1451 ... ON DELETE RESTRICT` | Đúng spec, không mất booking |
+| Index đủ | PASS | Đủ 18 index: users(2 unique), tours(3), prices(2), images(1), bookings(3), checkouts(1 unique), audit(3), refresh(2) | Check INFORMATION_SCHEMA |
 
-**Ghi chú:** ...
+**Ghi chú:** Tài khoản seed: admin/Admin123!, customer1 + customer2/Customer123!. Chưa push git. B2 mới làm Auth/Users/Audit endpoints.
 
 ---
 

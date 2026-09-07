@@ -121,7 +121,7 @@ POST /api/bookings { tourId, quantity, paymentMethod }
 
 ### UC3 — Quản lý User (Admin only)
 
-* `GET /api/users?page&size&search` (search theo username/email, pagination).
+* `GET /api/users?page&pageSize&search` (search theo username/email, pagination).
 * `PUT /api/users/{id}/role {role}`, `PUT /api/users/{id}/lock {locked:true|false}`.
 * AC: tự khóa/tự hạ role chính mình -> `400 SELF_ACTION_DENIED`. Khóa user đã có booking active vẫn cho khóa (không cho login mới) + audit.
 * Mọi thao tác ghi `audit_logs`.
@@ -132,11 +132,11 @@ POST /api/bookings { tourId, quantity, paymentMethod }
 * `POST /api/tours/{id}/prices {source_name, price_value>0, effective_date}` — sai -> `422` chỉ rõ field. `effective_date` không được quá khứ quá 1 ngày (trừ seed).
 * `POST /api/tours/{id}/images` — xem mục 7.
 * `PUT/DELETE /api/prices/{id}` + audit `Price.Update`.
-* `GET /api/tours?search&destinationId&minPrice&maxPrice&page&size&sort` — response `PagedResult<TourListDto>` gồm `priceFrom` (min giá hiệu lực), `thumbnail`.
+* `GET /api/tours?search&destinationId&minPrice&maxPrice&page&pageSize&sort` — response `PagedResult<TourListDto>` gồm `priceFrom` (min giá hiệu lực), `thumbnail`.
 
 ### AuditLog API
 
-* `GET /api/audit-logs?entityType&entityId&page&size` (Admin only). Dùng để demo truy vết đổi giá / đổi trạng thái.
+* `GET /api/audit-logs?entityType&entityId&page&pageSize` (Admin only). Dùng để demo truy vết đổi giá / đổi trạng thái.
 
 ---
 

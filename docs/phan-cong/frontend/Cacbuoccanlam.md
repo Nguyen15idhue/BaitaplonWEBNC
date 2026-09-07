@@ -2,21 +2,39 @@
 
 > Team: 1 người (FE). Khung `travela-web` + Tailwind + shadcn/ui + Nginx đã có sẵn từ người setup.
 > Backend cung cấp `docs/api.md` + Types. FE chạy song song bằng mock đúng Types, không đợi BE.
+> Tra cứu duy nhất khi đấu nối: `docs/phan-cong/backend/api.md` — bảng trạng thái từng endpoint
+> + Phụ lục A (JSON mẫu làm mock), B (enum/query chốt), C (mã lỗi → toast).
+> Cổng thực tế trên máy: FE `localhost:3001` (3000 bị app khác chiếm), BE `localhost:5000`, MySQL host `3307`.
 > Quy ước: mọi gọi API qua `services/*`, không `fetch` trực tiếp trong component. JSON camelCase khớp BE.
+
+---
+
+## Bản đồ trang → API (xem trạng thái endpoint ở `docs/phan-cong/backend/api.md`)
+
+| Trang FE | Endpoint BE | Trạng thái hiện tại | Cách làm |
+|---|---|---|---|
+| `/`, `/tours`, `/tours/:id` | GET /api/tours, GET /api/tours/{id}, GET /api/destinations | Tạm/Chưa | Mock theo Phụ lục A, đấu thật ở F4 |
+| `/booking/:tourId`, `/checkout/:bookingId` | POST /api/bookings, GET /api/checkouts/{id} | Chưa | Mock + validate FE, đấu thật F4 |
+| `/my-bookings` | GET /api/bookings, GET /api/bookings/{id} | Chưa | Mock tracking timeline, đấu thật F4 |
+| `/login`, `/register` | POST /api/auth/*, GET /api/auth/me | Chưa | Login mock, thay login thật ở F4 |
+| `/admin/users` | GET /api/users, PUT role/lock | Chưa | Mock table, đấu thật F4 |
+| `/admin/tours`, `/admin/destinations` | CRUD tours/prices/images/destinations | Chưa | Mock, đấu thật F4 |
+| `/admin/bookings` | GET /api/bookings, PUT status/cancel | Chưa | Mock state machine, đấu thật F4 |
+| `/admin` Dashboard | Tận dụng GET /api/bookings + GET /api/tours | — | Không cần API thống kê riêng |
 
 ---
 
 ## F0. Nhận khung (0.5 ngày)
 
 **Công việc:**
-1. Pull khung, chạy `npm install`, `npm run dev`, check `docker compose up` mở `localhost:3000` proxy được `/api`.
+1. Pull khung, chạy `npm install`, `npm run dev`, check `docker compose up` mở `localhost:3001` proxy được `/api`.
 2. Copy `DTOs` BE -> `src/types/` (`User, Tour{priceFrom,thumbnail}, Destination, Booking{tracking}, Checkout`).
 3. Đọc design-system + API contract mục 8 bản hoàn thiện.
 
 **Yêu cầu đạt:** Dev + Docker đều chạy, Types khớp BE.
 **Checklist test:**
 - [ ] `npm run dev` + `npm run build` không lỗi TS
-- [ ] `localhost:3000/api/...` hoặc `localhost:5000/api/tours` gọi được (khi BE chưa xong thì mock)
+- [ ] `localhost:3001/api/...` hoặc `localhost:5000/api/tours` gọi được (khi BE chưa xong thì mock)
 - [ ] Types compile, không `any` tràn lan
 **Ghi chú:** Từ chối đổi tên field. BE đổi phải sync Types ngay.
 
@@ -111,8 +129,9 @@
 1. Responsive (mobile/tablet/desktop) cho Home/Tour/Booking/Admin table (scroll ngang).
 2. Validation FE/BE trùng nhau, Rà soát design-system (màu/radius/spacing).
 3. Rehearsal `docker compose up -d --build`, quay video <5p, chụp ảnh 401/403/validation/pagination.
+   Mở demo ở `localhost:3001` (không phải 3000).
 
-**Yêu cầu đạt:** Build Docker mở `localhost:3000` demo mượt, không lỗi console.
+**Yêu cầu đạt:** Build Docker mở `localhost:3001` demo mượt, không lỗi console.
 **Checklist test:**
 - [ ] Lighthouse/console không error, `npm run build` sạch
 - [ ] Mobile không vỡ layout, bảng admin scroll được
