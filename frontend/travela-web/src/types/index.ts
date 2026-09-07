@@ -41,9 +41,14 @@ export interface TrackingStep {
 export interface Booking {
   id: number;
   tourId: number;
+  tourName: string;
+  userId: number;
+  username: string;
   quantity: number;
   status: string;
+  bookingDate: string;
   tracking: TrackingStep[];
+  checkout?: Checkout;
 }
 
 export interface Checkout {
@@ -51,6 +56,31 @@ export interface Checkout {
   bookingId: number;
   amount: number;
   status: string;
+  paymentMethod?: string;
+  transactionRef?: string;
+}
+
+// F2: khớp TourDetailDto BE (detail + images + prices hiệu lực).
+export interface TourImage {
+  id: number;
+  imageUrl: string;
+  caption: string;
+  sortOrder: number;
+}
+
+export interface TourPrice {
+  id: number;
+  sourceName: string;
+  priceValue: number;
+  effectiveDate: string;
+}
+
+export interface TourDetail extends Tour {
+  description: string;
+  maxSeats: number;
+  destinationId: number;
+  images: TourImage[];
+  prices: TourPrice[];
 }
 
 // F1b: khớp DTO Auth BE + lỗi chuẩn { error, message }.

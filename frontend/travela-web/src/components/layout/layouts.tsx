@@ -1,49 +1,98 @@
+import { useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { Button } from "../ui/button";
+import { cn } from "../../lib/utils";
+
+const MAIN_LINKS = [
+  { to: "/tours", label: "Tours" },
+  { to: "/destinations", label: "Điểm đến" },
+  { to: "/my-bookings", label: "My bookings" },
+];
+
+const ADMIN_LINKS = [
+  { to: "/admin", label: "Dashboard" },
+  { to: "/admin/users", label: "Users" },
+  { to: "/admin/tours", label: "Tours" },
+  { to: "/admin/destinations", label: "Destinations" },
+  { to: "/admin/bookings", label: "Bookings" },
+];
 
 function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
   return (
-    <header className="flex items-center gap-4 border-b border-[#E2E8F0] bg-white px-6 py-3">
-      <Link to="/" className="text-base font-bold text-[#2563EB]">
-        Travela
-      </Link>
-      <nav className="flex items-center gap-4 text-sm">
-        <Link to="/tours" className="text-[#0F172A]">
-          Tours
+    <header className="relative border-b border-[#E2E8F0] bg-white">
+      <div className="flex items-center gap-3 px-4 py-3 md:gap-4 md:px-6">
+        <button
+          className="rounded-[4px] p-2 hover:bg-[#F1F5F9] md:hidden"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Menu"
+        >
+          {open ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <Link to="/" className="text-base font-bold text-[#2563EB]">
+          Travela
         </Link>
-        <Link to="/my-bookings" className="text-[#0F172A]">
-          My bookings
-        </Link>
-        {user?.role === "Admin" && (
-          <Link to="/admin" className="text-[#0F172A]">
-            Admin
-          </Link>
-        )}
-      </nav>
-      <div className="ml-auto flex items-center gap-3 text-sm">
-        {user ? (
-          <>
-            <span className="text-[#64748B]">{user.username}</span>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                await logout();
-                navigate("/login");
-              }}
-            >
-              <LogOut size={14} /> Đăng xuất
-            </Button>
-          </>
-        ) : (
-          <Link to="/login" className="text-[#2563EB]">
-            Đăng nhập
-          </Link>
-        )}
+        <nav className="hidden items-center gap-4 text-sm md:flex">
+          {MAIN_LINKS.map((l) => (
+            <Link key={l.to} to={l.to} className="text-[#0F172A]">
+              {l.label}
+            </Link>
+          ))}
+          {user?.role === "Admin" && (
+            <Link to="/admin" className="text-[#0F172A]">
+              Admin
+            </Link>
+          )}
+        </nav>
+        <div className="ml-auto flex items-center gap-2 text-sm md:gap-3">
+          {user ? (
+            <>
+              <span className="hidden max-w-28 truncate text-[#64748B] sm:inline">{user.username}</span>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await logout();
+                  navigate("/login");
+                }}
+              >
+                <LogOut size={14} /> <span className="hidden sm:inline">Đăng xuất</span>
+              </Button>
+            </>
+          ) : (
+            <Link to="/login" className="text-[#2563EB]">
+              Đăng nhập
+            </Link>
+          )}
+        </div>
       </div>
+      {open && (
+        <nav className="absolute inset-x-0 top-full z-30 flex flex-col gap-1 border-b border-[#E2E8F0] bg-white px-4 py-2 text-sm shadow-md md:hidden">
+          {MAIN_LINKS.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              onClick={() => setOpen(false)}
+              className="rounded-[4px] px-3 py-2 text-[#0F172A] hover:bg-[#F1F5F9]"
+            >
+              {l.label}
+            </Link>
+          ))}
+          {user?.role === "Admin" && (
+            <Link
+              to="/admin"
+              onClick={() => setOpen(false)}
+              className="rounded-[4px] px-3 py-2 text-[#0F172A] hover:bg-[#F1F5F9]"
+            >
+              Admin
+            </Link>
+          )}
+        </nav>
+      )}
     </header>
   );
 }
@@ -52,50 +101,86 @@ export function AppLayout() {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="mx-auto max-w-6xl p-6">
+      <main className="mx-auto max-w-6xl p-4 md:p-6">
         <Outlet />
       </main>
     </div>
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1 text-sm">
-      <Link to="/admin" className="rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]">
-        Dashboard
-      </Link>
-      <Link to="/admin/users" className="rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]">
-        Users
-      </Link>
-      <Link to="/admin/tours" className="rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]">
-        Tours
-      </Link>
-      <Link to="/admin/destinations" className="rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]">
-        Destinations
-      </Link>
-      <Link to="/admin/bookings" className="rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]">
-        Bookings
-      </Link>
+      {ADMIN_LINKS.map((l) => (
+        <Link
+          key={l.to}
+          to={l.to}
+          onClick={onNavigate}
+          className="rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]"
+        >
+          {l.label}
+        </Link>
+      ))}
     </nav>
   );
 }
 
 export function AdminLayout() {
+  const [open, setOpen] = useState(false);
+
   return (
     <div className="min-h-screen">
-      <header className="border-b border-[#E2E8F0] bg-white px-6 py-3">
+      <header className="flex items-center gap-3 border-b border-[#E2E8F0] bg-white px-4 py-3 md:px-6">
+        <button
+          className="rounded-[4px] p-2 hover:bg-[#F1F5F9] md:hidden"
+          onClick={() => setOpen(true)}
+          aria-label="Mở menu admin"
+        >
+          <Menu size={20} />
+        </button>
         <Link to="/admin" className="text-base font-bold text-[#0F172A]">
           Travela Admin
         </Link>
+        <Link to="/" className="ml-auto text-sm text-[#2563EB]">
+          Về trang chủ
+        </Link>
       </header>
-      <div className="mx-auto flex max-w-6xl gap-6 p-6">
-        <aside className="w-48 shrink-0">
+      <div className="mx-auto flex max-w-6xl gap-6 p-4 md:p-6">
+        <aside className="hidden w-48 shrink-0 md:block">
           <Sidebar />
         </aside>
-        <main className="flex-1">
+        <main className="min-w-0 flex-1">
           <Outlet />
         </main>
+      </div>
+
+      {/* Drawer mobile */}
+      <div className={cn("fixed inset-0 z-40 md:hidden", !open && "pointer-events-none")}>
+        <div
+          className={cn(
+            "absolute inset-0 bg-black/40 transition-opacity",
+            open ? "opacity-100" : "opacity-0",
+          )}
+          onClick={() => setOpen(false)}
+        />
+        <aside
+          className={cn(
+            "absolute inset-y-0 left-0 w-64 bg-white p-4 shadow-lg transition-transform",
+            open ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <strong className="text-sm">Menu</strong>
+            <button
+              className="rounded-[4px] p-2 hover:bg-[#F1F5F9]"
+              onClick={() => setOpen(false)}
+              aria-label="Đóng menu"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <Sidebar onNavigate={() => setOpen(false)} />
+        </aside>
       </div>
     </div>
   );

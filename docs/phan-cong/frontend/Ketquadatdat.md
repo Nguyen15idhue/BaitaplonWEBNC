@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật)
-* Nhánh/commit: main, chưa commit/push F1 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (F1 xong code + build + API; visual chờ click tay)
+* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages)
+* Nhánh/commit: main, chưa commit/push F2 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (F2 xong code + build + API; luồng đặt chờ click tay)
 * BE đối chiếu: Health, Auth, Users, Audit (B2), Tours, Prices, Images, Destinations (B3), Bookings, Checkouts (B4), NFR + rehearsal (B5) — Swagger đủ 23 paths, k6 p95=68.79ms
 * Tài khoản test API thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
 
@@ -79,28 +79,36 @@
 
 ---
 
-## F2. Public pages — CHƯA (đấu thật toàn bộ vì B3/B4 xong)
+## F2. Public pages — XONG (đấu thật, chờ click tay luồng đặt)
 
-### File đã tạo/sửa (dự kiến)
+### File đã tạo/sửa
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| `src/pages/* (Home, TourList, TourDetail mở rộng từ pages.tsx)` | Sửa/tạo | Hero + tour nổi bật + destinations (thật) | ☐ |
-| `src/pages/Tours, Destinations, Booking, Checkout, MyBookings, Profile?` | Tạo | Search/filter/sort/pagination thật; form quantity; timeline thật | ☐ |
-| `src/services/tourApi.ts, bookingApi.ts, destinationApi.ts` | Sửa/tạo (thật) | Query `page,pageSize,search,destinationId,minPrice,maxPrice,sort` | ☐ |
+| `src/services/tourApi.ts` | Sửa (thật) | getTours đủ query Phụ lục B, getTourDetail, getTourPrices; bỏ fallback mock | ☑ |
+| `src/services/destinationApi.ts, bookingApi.ts` | Tạo (thật) | list/get destinations; create/my-bookings/detail/cancel/checkout | ☑ |
+| `src/types/index.ts` | Sửa | TourDetail + TourImage/TourPrice; Booking đủ tourName/username/checkout | ☑ |
+| `src/lib/format.ts` | Tạo | formatVND + bookingTone dùng chung | ☑ |
+| `src/components/common/TourCard.tsx` | Tạo | Card tour dùng chung Home + TourList | ☑ |
+| `src/pages/Home/TourList/TourDetail/Destinations` | Tạo | Hero + featured + vùng; filter/search/sort/page; gallery + bảng giá + nút Đặt | ☑ |
+| `src/pages/Booking/Checkout/MyBookings/Profile` | Tạo | Form quantity + amount live; 2 card checkout; filter + timeline Dialog + hủy Confirm; Profile từ /me (chỉ xem, BE chưa có sửa own) | ☑ |
+| `src/pages/pages.tsx`, `src/App.tsx` | Sửa | Chỉ giữ Forbidden/NotFound + Admin placeholder F3; thêm 8 routes (booking/checkout/my-bookings/profile protected) | ☑ |
+| `src/components/layout/layouts.tsx` | Sửa | Thêm link Điểm đến vào nav | ☑ |
 
 ### Kết quả test
 
 | Checklist F2 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Search/filter/page giữ filter (thật) | | | Query đúng Phụ lục B, pageSize 12/max 50 |
-| Tour hết chỗ/Hidden chặn đặt | | | Đối chiếu Swagger |
-| Validation quantity + toast 409 | | | FE chặn trước, BE `NOT_ENOUGH_SEATS` sau |
-| Checkout Paid timeline; Failed mock | | | Mock payment V1 luôn Paid |
-| Chưa login -> login -> quay lại | | | Nhờ F1b `location.state.from` |
-| Empty/Error đúng component | | | Search không ra + tắt backend |
+| Build sạch | PASS | `tsc && vite build` 1929 modules 0 lỗi (fix 3 lỗi: import trùng, path types, null trong closure) | — |
+| Routes serve | PASS | dev 10/10 routes 200 (/, /tours, /tours/2, /destinations, /booking/2, /checkout/1, /my-bookings, /profile, /login, /register) | Guard chạy client-side |
+| Search/filter/page giữ filter (thật) | PASS | list total 10, search 1, filter+sort 1, Pagination giữ state | Query đúng Phụ lục B |
+| Tour hết chỗ/Hidden chặn đặt | PASS (code+API) | detail 404 → ErrorState; đặt Hidden/Draft BE 400 đã verify B4 | Chờ click tay |
+| Validation quantity + toast 409 | PASS (code+API) | FE chặn qty≤0; oversell 409; toastForApiError | Chờ click tay đặt thật |
+| Checkout Paid timeline; Failed mock | PASS (code+API) | book 201 Paid amount đúng, tracking 2 mốc; Failed không live được | Đúng V1 |
+| Chưa login -> login -> quay lại | PASS (code) | ProtectedRoute from-state (F1b) | Chờ click tay |
+| Empty/Error đúng component | PASS | search rác total 0 → EmptyState; tour 999 → 404 ErrorState | Chưa test tắt backend |
 
-**Ghi chú:** Giá = `priceFrom` BE trả, không tự tính. Enum đúng Phụ lục B (`Draft/Published/Hidden`, `PendingPayment...Cancelled`).
+**Ghi chú:** Booking test (tour 8) + audit đã dọn, DB về seed 5/5. Chưa push git.
 
 ---
 

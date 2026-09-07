@@ -7,7 +7,7 @@ export function Dialog({ open, title, onClose, children }: { open: boolean; titl
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-[8px] border border-[#E2E8F0] bg-white p-6"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[8px] border border-[#E2E8F0] bg-white p-4 md:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">

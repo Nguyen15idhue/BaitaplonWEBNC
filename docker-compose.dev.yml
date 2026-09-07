@@ -1,0 +1,33 @@
+# Dev hot-reload: sửa code BE/FE là tự chạy lại, KHÔNG rebuild image.
+# Chạy:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Dừng:  docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+# Demo/nộp bài vẫn dùng file gốc: docker compose up --build
+# Lưu ý: không chạy dev và demo cùng lúc (trùng cổng backend 5000).
+services:
+  backend:
+    build: !reset null
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /src
+    volumes:
+      - ./backend/Travela.Api:/src
+      - /src/bin
+      - /src/obj
+    command: dotnet watch run --urls http://+:8080
+    environment:
+      DOTNET_WATCH_RESTART_ON_RUDE_EDIT: "true"
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+
+  frontend:
+    build: !reset null
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend/travela-web:/app
+      - /app/node_modules
+    command: sh -c "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_API_PROXY: http://backend:8080
+      CHOKIDAR_USEPOLLING: "true"
+    # Host dùng 5175 vì 5173/3000/3306 đã bị project khác giữ trên máy này.
+    ports: !override
+      - "5175:5173"
