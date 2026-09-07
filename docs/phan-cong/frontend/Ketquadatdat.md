@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện FE: agent (skeleton) + bạn (F1 tiếp theo)
-* Nhánh/commit: main, chưa commit/push (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (BE xong hết B0-B5; F0 giữ PASS, F1-F5 đấu thật)
+* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật)
+* Nhánh/commit: main, chưa commit/push F1 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (F1 xong code + build + API; visual chờ click tay)
 * BE đối chiếu: Health, Auth, Users, Audit (B2), Tours, Prices, Images, Destinations (B3), Bookings, Checkouts (B4), NFR + rehearsal (B5) — Swagger đủ 23 paths, k6 p95=68.79ms
 * Tài khoản test API thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
 
@@ -40,39 +40,42 @@
 
 ---
 
-## F1. Foundation + Auth thật — CHƯA (làm tiếp theo, ưu tiên cao nhất)
+## F1. Foundation + Auth thật — XONG (code + build + API, chờ click tay visual)
 
-> F1a giữ kế hoạch cũ. F1b MỚI vì BE B2 xong: xóa `loginMock`, đấu `register/login/refresh/logout/me` thật.
+> F1a giữ kế hoạch cũ. F1b đấu `register/login/refresh/logout/me` thật, xóa `loginMock`.
 
-### File đã tạo/sửa (dự kiến, bám `Cacbuoccanlam.md` F1)
+### File đã tạo/sửa (bám `Cacbuoccanlam.md` F1)
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| `package.json`, `components/ui/*` | Sửa/tạo (F1a) | Cài/verify Tailwind + shadcn Button/Input/.../Toast + Lucide | ☐ |
-| `src/index.css`, `docs/design-system.md` | Sửa/áp (F1a) | Inter, Primary #2563EB, BG #F8FAFC, Radius 4/6/8, Spacing 4-48; cấm gradient | ☐ |
-| `src/components/layout/layouts.tsx` | Sửa (F1a) | AppLayout/AdminLayout/Header/Sidebar/PageContainer | ☐ |
-| `src/components/common/common.tsx` | Sửa (F1a) | Thêm ConfirmDialog/Pagination/Toast dùng chung | ☐ |
-| `src/types/index.ts` | Sửa (F1b) | Thêm `status` vào `User`; thêm `AuthResponse { accessToken, refreshToken, user }`, `ApiError { error, message }` | ☐ |
-| `src/services/authApi.ts` | Sửa (F1b) | `register/login/refresh/logout/me` thật; xóa `loginMock`; lưu access+refresh+user localStorage | ☐ |
-| `src/services/api.ts` | Sửa (F1b) | Giữ baseURL /api + Bearer; thêm interceptor 401 → refresh 1 lần → retry, fail → về /login | ☐ |
-| `src/lib/auth-store.ts` | Sửa (F1b) | `getAccessToken/getRefreshToken/getUser/setSession/clearSession/isLoggedIn`, bỏ `role` rời | ☐ |
-| `src/routes/guards.tsx` | Sửa (F1b) | ProtectedRoute → /login; RoleGuard Admin → /403; persist F5 bằng GET /me | ☐ |
-| `src/pages/Login.tsx`, `src/pages/Register.tsx` | Sửa/tạo (F1b) | Form validate + toast theo mã BE + quay lại trang trước (`location.state.from`) | ☐ |
-| `src/services/*mock tối thiểu*` | Tạo (F1a) | Chỉ mock nhánh checkout Failed + lỗi/rỗng (F2/F3 đấu thật) | ☐ |
+| `package.json`, `vite.config.ts` | Sửa (F1a) | Thêm tailwindcss + @tailwindcss/vite + lucide-react + clsx + tailwind-merge; plugin tailwind | ☑ |
+| `src/index.css` | Sửa (F1a) | `@import tailwindcss` + giữ token Inter/Primary/BG/Text/Muted/Border | ☑ |
+| `src/lib/utils.ts` | Tạo (F1a) | `cn()` dùng chung ui | ☑ |
+| `src/components/ui/*` | Tạo (F1a) | button, fields (Input/Textarea/Select/Checkbox/FieldError), card (Card/Badge), dialog, table (Table/Pagination), toast (ToastProvider/useToast/toastForApiError), tabs — style shadcn, token chốt, không Radix | ☑ |
+| `src/components/layout/layouts.tsx` | Sửa (F1a) | Header (nav + user/logout) + Sidebar + PageContainer, Tailwind | ☑ |
+| `src/components/common/common.tsx` | Sửa (F1a) | Thêm ConfirmDialog, Pagination; style Tailwind | ☑ |
+| `src/types/index.ts` | Sửa (F1b) | Thêm `status` vào `User`; thêm `AuthResponse`, `ApiError` | ☑ |
+| `src/services/authApi.ts` | Sửa (F1b) | `register/login/refresh/logout/me` thật; xóa `loginMock` | ☑ |
+| `src/services/api.ts` | Sửa (F1b) | Bearer + interceptor 401 → refresh 1 lần → retry, fail → về /login | ☑ |
+| `src/lib/auth-store.ts` | Sửa (F1b) | Session access+refresh+user, bỏ `role` rời | ☑ |
+| `src/lib/auth-context.tsx` | Tạo (F1b) | AuthProvider + useAuth, persist F5 bằng GET /me | ☑ |
+| `src/routes/guards.tsx` | Sửa (F1b) | Dùng context + loading; from-state khi đá về login | ☑ |
+| `src/pages/Login.tsx`, `src/pages/Register.tsx` | Sửa/tạo (F1b) | Form validate + toast mã BE + quay lại trang trước | ☑ |
+| `src/App.tsx` | Sửa (F1b) | ToastProvider + AuthProvider + route /register | ☑ |
 
 ### Kết quả test
 
 | Checklist F1 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| `npm run dev` + `npm run build` sạch, không `any` tràn lan | | `npm run build` log ... | |
-| Layout / và /admin đúng | | Ảnh ... | |
-| Register trùng → 409 `DUPLICATE_USER`; login sai → 401 `INVALID_CREDENTIALS` | | Ảnh toast/log ... | Contract V1: refresh/logout body `{ refreshToken }` |
-| Login đúng → vào `/my-bookings`; F5 giữ login; logout sạch | | ... | Seed admin/customer1 ở trên |
-| Chưa login → /login; Customer vào /admin → 403, không lộ data | | Ảnh ... | |
-| Hết access tự refresh 1 lần; refresh hết/reuse cũ → văng login | | Log network ... | BE revoke cả chuỗi khi reuse |
-| Toast/Loading/Empty/Error + build Nginx không vỡ CSS | | Ảnh/build log ... | |
+| `npm run dev` + `npm run build` sạch, không `any` tràn lan | PASS | `tsc && vite build` 1917 modules 0 lỗi; grep `: any` = 0 file; dev 5174 các route 200 | 5173 bị process cũ giữ nên dev chạy 5174 |
+| Layout / và /admin đúng | PASS (code) | Sidebar/Header/PageContainer Tailwind đúng token; dev `/admin` serve shell, RoleGuard client-side | Chờ click tay chụp layout |
+| Register trùng → 409 `DUPLICATE_USER`; login sai → 401 `INVALID_CREDENTIALS` | PASS | Đúng payload FE: 409 + 401; toastForApiError hiện message BE | — |
+| Login đúng → vào `/my-bookings`; F5 giữ login; logout sạch | PASS (code+API) | login→user Admin, me 200, refresh 200, logout→refresh 401; context + persist me | Chờ click tay login/F5/logout |
+| Chưa login → /login; Customer vào /admin → 403, không lộ data | PASS (code) | Guards dùng user.role từ me, from-state, /403 | Chờ click tay |
+| Hết access tự refresh 1 lần; refresh hết/reuse cũ → văng login | PASS (code+API) | Interceptor `_retry` + trần axios; BE revoke chuỗi đã verify B2 | Chờ click tay xóa access test |
+| Toast/Loading/Empty/Error + build Nginx không vỡ CSS | PASS | ToastProvider + common đủ; Docker rebuild: `/`, `/login`, `/api/tours` 200, CSS 13.68 kB trong bundle | Chờ click tay xem toast visual |
 
-**Ghi chú:** Role FE chỉ là UX, bảo mật do BE `[Authorize]`. Token V1 localStorage + ghi rủi ro XSS vào báo cáo (cookie HttpOnly để V2).
+**Ghi chú:** ui theo pattern shadcn thủ công (chưa chạy CLI, không Radix) đúng token — đủ chuẩn agents.md. Token V1 localStorage + rủi ro XSS ghi báo cáo (cookie HttpOnly để V2).
 
 ---
 

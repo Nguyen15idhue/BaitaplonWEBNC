@@ -11,6 +11,7 @@ export interface User {
   username: string;
   email: string;
   role: "Admin" | "Customer";
+  status: string;
 }
 
 export interface Destination {
@@ -50,4 +51,16 @@ export interface Checkout {
   bookingId: number;
   amount: number;
   status: string;
+}
+
+// F1b: khớp DTO Auth BE + lỗi chuẩn { error, message }.
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+}
+
+export interface ApiError {
+  error: string;
+  message: string;
 }

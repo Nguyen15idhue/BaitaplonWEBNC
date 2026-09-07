@@ -1,21 +1,31 @@
 import { api } from "./api";
+import { clearSession, getRefreshToken, setSession } from "../lib/auth-store";
+import type { AuthResponse, User } from "../types";
 
-export async function loginMock(username: string): Promise<void> {
-  // B4 sẽ thay bằng POST /auth/login thật. Skeleton chỉ lưu token giả để test guard.
-  localStorage.setItem("accessToken", `mock-${username}`);
-  localStorage.setItem("role", username === "admin" ? "Admin" : "Customer");
+// Auth thật theo contract V1 (docs/phan-cong/backend/api.md mục 2).
+export async function register(username: string, email: string, password: string): Promise<User> {
+  const res = await api.post<User>("/auth/register", { username, email, password });
+  return res.data;
 }
 
-export async function fetchMe(): Promise<{ username: string } | null> {
+export async function login(usernameOrEmail: string, password: string): Promise<AuthResponse> {
+  const res = await api.post<AuthResponse>("/auth/login", { usernameOrEmail, password });
+  const { accessToken, refreshToken, user } = res.data;
+  setSession(accessToken, refreshToken, user);
+  return res.data;
+}
+
+export async function logout(): Promise<void> {
+  const rt = getRefreshToken();
   try {
-    const res = await api.get("/auth/me");
-    return res.data;
+    if (rt) await api.post("/auth/logout", { refreshToken: rt });
   } catch {
-    return null;
+    // Logout BE lỗi vẫn xóa session local.
   }
+  clearSession();
 }
 
-export function logout(): void {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("role");
+export async function me(): Promise<User> {
+  const res = await api.get<User>("/auth/me");
+  return res.data;
 }

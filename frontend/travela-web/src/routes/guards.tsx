@@ -1,14 +1,21 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
-import { isLoggedIn, getRole } from "../lib/auth-store";
+import { useAuth } from "../lib/auth-context";
+import { Loading } from "../components/common/common";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  if (!isLoggedIn()) return <Navigate to="/login" replace />;
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <Loading />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <>{children}</>;
 }
 
 export function RoleGuard({ role, children }: { role: string; children: ReactNode }) {
-  if (!isLoggedIn()) return <Navigate to="/login" replace />;
-  if (getRole() !== role) return <Navigate to="/403" replace />;
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return <Loading />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (user.role !== role) return <Navigate to="/403" replace />;
   return <>{children}</>;
 }

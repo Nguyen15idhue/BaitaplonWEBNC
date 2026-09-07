@@ -1,4 +1,7 @@
-/* Design tokens skeleton. Chi tiet day du o docs/design-system.md (F1). */
+@import "tailwindcss";
+
+/* Design tokens Travela (docs/design-system.md). Tailwind v4: utilities dùng trực tiếp,
+   token dùng qua CSS vars để mọi component chung 1 nguồn. */
 :root {
   --primary: #2563eb;
   --bg: #f8fafc;
@@ -12,9 +15,4 @@ body {
   font-family: Inter, system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-}
-
-a {
-  color: var(--primary);
-  margin-right: 12px;
 }
