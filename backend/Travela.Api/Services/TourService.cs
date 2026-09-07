@@ -25,7 +25,7 @@ public class TourService
 
     public async Task<PagedResult<TourListDto>> ListAsync(
         string? search, int? destinationId, decimal? minPrice, decimal? maxPrice,
-        int page, int pageSize, string? sort, bool publicOnly)
+        int page, int pageSize, string? sort, bool publicOnly, string? status = null)
     {
         (page, pageSize) = PaginationHelper.Normalize(page, pageSize);
         var now = DateTime.UtcNow;
@@ -35,6 +35,7 @@ public class TourService
             .Include(t => t.Images)
             .AsQueryable();
         if (publicOnly) q = q.Where(t => t.Status == "Published");
+        if (!string.IsNullOrWhiteSpace(status)) q = q.Where(t => t.Status == status);
         if (destinationId.HasValue) q = q.Where(t => t.DestinationId == destinationId.Value);
         if (!string.IsNullOrWhiteSpace(search)) q = q.Where(t => t.TourName.Contains(search));
 

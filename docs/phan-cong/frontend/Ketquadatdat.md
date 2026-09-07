@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages)
-* Nhánh/commit: main, chưa commit/push F2 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (F2 xong code + build + API; luồng đặt chờ click tay)
+* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin)
+* Nhánh/commit: main, chưa commit/push F3 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (F3 xong code + build + API; thao tác chờ click tay)
 * BE đối chiếu: Health, Auth, Users, Audit (B2), Tours, Prices, Images, Destinations (B3), Bookings, Checkouts (B4), NFR + rehearsal (B5) — Swagger đủ 23 paths, k6 p95=68.79ms
 * Tài khoản test API thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
 
@@ -112,29 +112,30 @@
 
 ---
 
-## F3. Admin pages — CHƯA (đấu thật toàn bộ vì B2+B3+B4 xong)
+## F3. Admin pages — XONG (đấu thật, chờ click tay thao tác)
 
-### File đã tạo/sửa (dự kiến)
+### File đã tạo/sửa
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| `src/pages/admin/Dashboard` | Tạo | Cards tổng tour/booking/users/doanh thu + bảng mới nhất (thật) | ☐ |
-| `src/services/userApi.ts` | Tạo (đấu thật) | `list({page,pageSize,search})`, `updateRole(id,{role})`, `updateLock(id,{locked})` | ☐ |
-| `src/pages/admin/Users` | Tạo (đấu thật) | Table + search + pagination + lock/unlock + đổi role; disable tự khóa + toast 400 `SELF_ACTION_DENIED` | ☐ |
-| `src/pages/admin/Tours, Destinations` | Tạo (đấu thật) | CRUD Dialog, edit gộp tab Prices+Images; validate trùng BE | ☐ |
-| `src/pages/admin/Bookings` | Tạo (đấu thật) | Filter status + đổi status đúng state machine + trace + audit `GET /audit-logs?entityType&entityId` | ☐ |
+| `src/services/userApi.ts, auditApi.ts` | Tạo (thật) | Users search/role/lock; audit theo entity | ☑ |
+| `src/services/tourApi.ts, destinationApi.ts, bookingApi.ts` | Sửa (thêm hàm admin) | CRUD tour/giá/ảnh, destinations, bookings status; `adminListTours` qua `/tours/all` | ☑ |
+| `src/pages/admin/Dashboard/Users/Tours/Destinations/Bookings` | Tạo (thật) | Cards + bảng mới nhất; table search/lock/role + chặn tự khóa; CRUD tab Giá/Ảnh; CRUD vùng; filter + đổi status + trace + audit | ☑ |
+| `src/App.tsx`, `src/pages/pages.tsx` | Sửa | 5 routes /admin/*; xóa Admin placeholder | ☑ |
+| BE `ToursController` + `TourService` | Sửa (lấp thiếu) | Thêm `GET /tours/all` Admin + detail cho Admin xem Draft/Hidden; ListAsync thêm filter status | ☑ |
 
 ### Kết quả test
 
 | Checklist F3 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Users search/lock/role thật, chặn tự khóa | | Log + ảnh ... | Test bằng seed admin |
-| Customer vào admin -> 403 | | | Kế thừa F1b |
-| CRUD tour/prices/images thật | | | Đổi giá xong list cập nhật ngay |
-| Đổi status sai -> toast đẹp `INVALID_STATUS_TRANSITION` | | | Không crash |
-| Pagination giữ filter | | | |
+| Users search/lock/role thật, chặn tự khóa | PASS | search total 3; lock/unlock c2 200; tự khóa + tự hạ quyền 400 | Disable nút row chính mình ở UI |
+| Customer vào admin -> 403 | PASS (code) | RoleGuard kế thừa F1b | Chờ click tay |
+| CRUD tour/prices/images thật | PASS | create 201 → update → add giá/ảnh 201 → delete cứng; validation 400/422 | Dữ liệu test đã dọn |
+| Đổi status sai -> toast đẹp `INVALID_STATUS_TRANSITION` | PASS (code+API) | BE 400 đã verify; UI chỉ liệt kê bước kế hợp lệ + toast lỗi | Chờ click tay |
+| Pagination giữ filter | PASS (code) | load(p, search/status) giữ filter | Chờ click tay |
+| Admin xem Draft/Hidden + audit view | PASS | `/tours/all` admin total 12, customer 403; audit Booking 2 rows | Endpoint BE bổ sung cho F3 |
 
-**Ghi chú:** Dùng chung `Table + Pagination + ConfirmDialog`. Audit role/lock đã có BE, gắn view nếu còn giờ.
+**Ghi chú:** Dọn sạch booking/tour/destination/audit test, DB về seed. Chưa push git.
 
 ---
 

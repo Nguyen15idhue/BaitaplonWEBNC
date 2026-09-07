@@ -28,3 +28,13 @@ export async function getCheckout(id: number): Promise<Checkout> {
   const res = await api.get<Checkout>(`/checkouts/${id}`);
   return res.data;
 }
+
+// Admin (B4): xem tất cả + chuyển trạng thái đúng state machine.
+export async function adminListBookings(status?: string, page = 1, pageSize = 12): Promise<PagedResult<Booking>> {
+  return getMyBookings(status, page, pageSize);
+}
+
+export async function updateBookingStatus(id: number, status: string, note: string): Promise<Booking> {
+  const res = await api.put<Booking>(`/bookings/${id}/status`, { status, note });
+  return res.data;
+}

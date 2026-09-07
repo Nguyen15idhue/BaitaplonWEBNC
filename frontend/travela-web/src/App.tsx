@@ -12,7 +12,11 @@ import { BookingPage } from "./pages/Booking";
 import { CheckoutPage } from "./pages/Checkout";
 import { MyBookings } from "./pages/MyBookings";
 import { Profile } from "./pages/Profile";
-import { Admin } from "./pages/pages";
+import { Dashboard } from "./pages/admin/Dashboard";
+import { AdminUsers } from "./pages/admin/Users";
+import { AdminTours } from "./pages/admin/Tours";
+import { AdminDestinations } from "./pages/admin/Destinations";
+import { AdminBookings } from "./pages/admin/Bookings";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 
@@ -70,7 +74,11 @@ export default function App() {
                 </RoleGuard>
               }
             >
-              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin" element={<Dashboard />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/tours" element={<AdminTours />} />
+              <Route path="/admin/destinations" element={<AdminDestinations />} />
+              <Route path="/admin/bookings" element={<AdminBookings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

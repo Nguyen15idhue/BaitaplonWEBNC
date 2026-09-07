@@ -57,7 +57,8 @@ Login trả thêm `user` (tiện cho FE, không phá contract).
 | Endpoint | Quyền | Ghi chú | Trạng thái |
 |---|---|---|---|
 | GET /api/tours?search&destinationId&minPrice&maxPrice&page&pageSize&sort | Public | Chỉ Published; `TourListDto { id, tourName, thumbnail, priceFrom, destination, status }` | Hoàn thành |
-| GET /api/tours/{id} | Public | `TourDetailDto` kèm images + prices hiệu lực | Hoàn thành |
+| GET /api/tours/all?...&status | Admin | F3 bổ sung: Admin xem tất cả trạng thái để quản trị | Hoàn thành |
+| GET /api/tours/{id} | Public (+Admin xem cả Draft/Hidden) | `TourDetailDto` kèm images + prices hiệu lực | Hoàn thành |
 | POST/PUT /api/tours | Admin | Validate tên max 200, destination tồn tại, maxSeats > 0 | Hoàn thành |
 | DELETE /api/tours/{id} | Admin | Có booking thì chuyển Hidden, không xóa cứng | Hoàn thành |
 
