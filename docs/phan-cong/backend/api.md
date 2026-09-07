@@ -45,36 +45,36 @@ Login trả thêm `user` (tiện cho FE, không phá contract).
 |---|---|---|---|
 | GET /api/audit-logs?entityType&entityId&page&pageSize | filter theo đối tượng | 200 PagedResult AuditLog | Hoàn thành |
 
-## 5. Destinations — Chưa (B3)
+## 5. Destinations — Hoàn thành (B3, 2026-09-07)
 
 | Endpoint | Quyền | Ghi chú | Trạng thái |
 |---|---|---|---|
-| GET /api/destinations, GET /api/destinations/{id} | Public | Kèm vùng Bắc\|Trung\|Nam | Chưa |
-| POST/PUT/DELETE /api/destinations | Admin | Xóa destination còn tour thì chặn | Chưa |
+| GET /api/destinations, GET /api/destinations/{id} | Public | Kèm vùng Bắc\|Trung\|Nam | Hoàn thành |
+| POST/PUT/DELETE /api/destinations | Admin | Xóa destination còn tour thì chặn 400 HAS_TOURS | Hoàn thành |
 
-## 6. Tours — Một phần (placeholder B0, B3 làm thật)
+## 6. Tours — Hoàn thành (B3 thật, 2026-09-07)
 
 | Endpoint | Quyền | Ghi chú | Trạng thái |
 |---|---|---|---|
-| GET /api/tours?search&destinationId&minPrice&maxPrice&page&pageSize&sort | Public | Hiện tại placeholder trả rỗng; B3 trả `TourListDto { id, tourName, thumbnail, priceFrom, destination, status }` | Tạm (chưa thật) |
-| GET /api/tours/{id} | Public | B3: `TourDetailDto` kèm images + prices hiệu lực | Chưa |
-| POST/PUT /api/tours | Admin | Validate tên max 200, destination tồn tại, maxSeats > 0 | Chưa |
-| DELETE /api/tours/{id} | Admin | Có booking thì chuyển Hidden, không xóa cứng | Chưa |
+| GET /api/tours?search&destinationId&minPrice&maxPrice&page&pageSize&sort | Public | Chỉ Published; `TourListDto { id, tourName, thumbnail, priceFrom, destination, status }` | Hoàn thành |
+| GET /api/tours/{id} | Public | `TourDetailDto` kèm images + prices hiệu lực | Hoàn thành |
+| POST/PUT /api/tours | Admin | Validate tên max 200, destination tồn tại, maxSeats > 0 | Hoàn thành |
+| DELETE /api/tours/{id} | Admin | Có booking thì chuyển Hidden, không xóa cứng | Hoàn thành |
 
-## 7. Prices — Chưa (B3, Admin)
-
-| Endpoint | Ghi chú | Lỗi | Trạng thái |
-|---|---|---|---|
-| GET /api/tours/{id}/prices | Giá theo tour | — | Chưa |
-| POST /api/tours/{id}/prices `{ sourceName, priceValue>0, effectiveDate }` | Mọi đổi giá ghi audit | 422 giá sai | Chưa |
-| PUT/DELETE /api/prices/{id} | Kèm audit | 422 | Chưa |
-
-## 8. Images — Chưa (B3, Admin)
+## 7. Prices — Hoàn thành (B3, Admin, 2026-09-07)
 
 | Endpoint | Ghi chú | Lỗi | Trạng thái |
 |---|---|---|---|
-| POST /api/tours/{id}/images `{ imageUrl, caption, sortOrder }` | URL max 500 ký tự, tối đa 10 ảnh/tour | 422 URL sai | Chưa |
-| DELETE /api/images/{id} | — | — | Chưa |
+| GET /api/tours/{id}/prices | Giá hiệu lực theo tour | — | Hoàn thành |
+| POST /api/tours/{id}/prices `{ sourceName, priceValue>0, effectiveDate }` | Mọi đổi giá ghi audit | 422 giá sai | Hoàn thành |
+| PUT/DELETE /api/prices/{id} | Kèm audit | 422 | Hoàn thành |
+
+## 8. Images — Hoàn thành (B3, Admin, 2026-09-07)
+
+| Endpoint | Ghi chú | Lỗi | Trạng thái |
+|---|---|---|---|
+| POST /api/tours/{id}/images `{ imageUrl, caption, sortOrder }` | URL max 500 ký tự, tối đa 10 ảnh/tour | 422 URL sai, 400 quá 10 | Hoàn thành |
+| DELETE /api/images/{id} | — | — | Hoàn thành |
 
 ## 9. Bookings + Tracking — Chưa (B4)
 
@@ -94,9 +94,8 @@ Login trả thêm `user` (tiện cho FE, không phá contract).
 
 ## Tổng hợp tiến độ (2026-09-07)
 
-- Hoàn thành: Health (B0+B1), Auth + Users + Audit (B2).
-- Tạm (placeholder): 1 (GET /api/tours).
-- Chưa: Destinations, Tours thật, Prices, Images (B3), Bookings, Checkouts (B4).
+- Hoàn thành: Health (B0+B1), Auth + Users + Audit (B2), Destinations + Tours + Prices + Images (B3).
+- Chưa: Bookings, Checkouts (B4).
 
 ---
 

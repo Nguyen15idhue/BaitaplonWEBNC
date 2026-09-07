@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) + agent (B2 Auth) | BE2: chưa làm
-* Commit/nhánh: main, chưa commit/push B2 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (B2 xong)
+* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) + agent (B2 Auth) | BE2: agent (B3 Tours)
+* Commit/nhánh: main, chưa commit/push B3 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (B3 xong)
 
 ---
 
@@ -110,21 +110,23 @@
 
 | File | Hành động | Nội dung chính | Người | Trạng thái |
 |---|---|---|---|---|
-| `Controllers/ToursController, PricesController, DestinationsController` | | | | ☐/☑ |
-| `Services/TourService, DestinationService` | | priceFrom logic | | ☐/☑ |
-| `DTOs/Tour/*` | | List/Detail/Create | | ☐/☑ |
+| `Controllers/ToursController, PricesController, DestinationsController, ImagesController` | Tạo/sửa (Tours ghi đè placeholder) | Đọc public, ghi Admin; prices/images route lồng theo tour | agent (BE2) | ☑ |
+| `Services/TourService, DestinationService` | Tạo | priceFrom min giá hiệu lực, filter/sort/page, validate, audit tour + giá | agent (BE2) | ☑ |
+| `DTOs/Tour/TourDtos.cs, DTOs/Destination/DestinationDtos.cs` | Tạo | List/Detail/Create/Update khớp Types FE | agent (BE2) | ☑ |
+| `Program.cs` | Sửa | Đăng ký 2 services | agent (BE2) | ☑ |
 
 ### Kết quả test
 
 | Checklist B3 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Paging/search/filter đúng | | | |
-| Validation tour/prices/images | | | |
-| priceFrom = min hiệu lực | | | |
-| Customer POST tour -> 403 | | | |
-| Audit Price.Update | | | |
+| Paging/search/filter đúng | PASS | list total=10 (chỉ Published), search Hạ Long=1, dest2=1, min3m=4, max1m=2 | Ẩn đúng Draft/Hidden |
+| Validation tour/prices/images | PASS | thiếu tên/sai destination 400; giá 0 + date quá khứ 422; URL sai 422 | Rõ field |
+| priceFrom = min hiệu lực | PASS | tour2=2490000 (list+detail khớp), tour1=790000 (min 3 nguồn) | Bản mới nhất từng nguồn |
+| Customer POST tour -> 403 | PASS | customer1 POST = 403 | — |
+| Audit Price.Update | PASS | audit-logs Price/31 có Price.Create + Price.Update | Tour hide/restore cũng audit |
+| Limit 10 ảnh + xóa tour có booking | PASS | ảnh 11 = 400 TOO_MANY_IMAGES; xóa tour1 = hidden:true; tour trống xóa cứng | Tour1 đã restore Published, DB về seed 12/30/30 |
 
-**Ghi chú:** ...
+**Ghi chú:** Lỗi test gặp (không phải lỗi server): PowerShell 5.1 gửi body UTF-8 sai gây 400 giả — fix bằng bytes UTF-8 + script Python. Dữ liệu test + audit rác đã dọn. Chưa push git. FE đấu được Tours/Destinations thật.
 
 ---
 

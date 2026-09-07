@@ -23,6 +23,8 @@ builder.Services.AddSingleton<JwtHelper>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<AuditLogService>();
+builder.Services.AddScoped<DestinationService>();
+builder.Services.AddScoped<TourService>();
 
 // B2: JWT access. Secret từ JWT_SECRET env (xem docker-compose), fallback dev trong code.
 var jwtSecret = builder.Configuration["JWT_SECRET"]
