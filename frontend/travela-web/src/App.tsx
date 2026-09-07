@@ -17,6 +17,7 @@ import { AdminUsers } from "./pages/admin/Users";
 import { AdminTours } from "./pages/admin/Tours";
 import { AdminDestinations } from "./pages/admin/Destinations";
 import { AdminBookings } from "./pages/admin/Bookings";
+import { AuditLogs } from "./pages/admin/AuditLogs";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 
@@ -79,6 +80,7 @@ export default function App() {
               <Route path="/admin/tours" element={<AdminTours />} />
               <Route path="/admin/destinations" element={<AdminDestinations />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
+              <Route path="/admin/audit-logs" element={<AuditLogs />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,9 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
+import { getHealth } from "../../services/tourApi";
+
+// Footer hiện trạng thái hệ thống (F4): GET /health, db:up.
+function Footer() {
+  const [db, setDb] = useState("...");
+  useEffect(() => {
+    getHealth()
+      .then((h) => setDb(h.db))
+      .catch(() => setDb("down"));
+  }, []);
+  return (
+    <footer className="border-t border-[#E2E8F0] bg-white px-6 py-2 text-xs text-[#64748B]">
+      Travela · DB: {db}
+    </footer>
+  );
+}
 
 const MAIN_LINKS = [
   { to: "/tours", label: "Tours" },
@@ -17,6 +33,7 @@ const ADMIN_LINKS = [
   { to: "/admin/tours", label: "Tours" },
   { to: "/admin/destinations", label: "Destinations" },
   { to: "/admin/bookings", label: "Bookings" },
+  { to: "/admin/audit-logs", label: "Audit logs" },
 ];
 
 function Header() {
@@ -99,11 +116,12 @@ function Header() {
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="mx-auto max-w-6xl p-4 md:p-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 }
@@ -129,7 +147,7 @@ export function AdminLayout() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <header className="flex items-center gap-3 border-b border-[#E2E8F0] bg-white px-4 py-3 md:px-6">
         <button
           className="rounded-[4px] p-2 hover:bg-[#F1F5F9] md:hidden"
@@ -145,7 +163,7 @@ export function AdminLayout() {
           Về trang chủ
         </Link>
       </header>
-      <div className="mx-auto flex max-w-6xl gap-6 p-4 md:p-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 gap-6 p-4 md:p-6">
         <aside className="hidden w-48 shrink-0 md:block">
           <Sidebar />
         </aside>
@@ -153,6 +171,7 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <Footer />
 
       {/* Drawer mobile */}
       <div className={cn("fixed inset-0 z-40 md:hidden", !open && "pointer-events-none")}>

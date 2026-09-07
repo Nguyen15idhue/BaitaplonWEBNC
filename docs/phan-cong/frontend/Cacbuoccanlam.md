@@ -122,7 +122,7 @@ Xem evidence ở `Ketquadatdat.md` (build `tsc && vite build` 0 lỗi, `localhos
 **Công việc:**
 1. Xóa hết mock còn sót (chỉ giữ mock cho nhánh checkout Failed và trạng thái lỗi/rỗng).
 2. Chuẩn hóa error toast toàn app theo Phụ lục C (`NOT_ENOUGH_SEATS 409, INVALID_STATUS_TRANSITION 400, VALIDATION_ERROR 422, FORBIDDEN 403...`), không hiện stack trace.
-3. Gắn audit view (lịch sử đổi giá/status/role/lock qua `GET /audit-logs`) + check `/health` (`db:up`) ở footer/admin.
+3. Trang admin `/admin/audit-logs` riêng xem lịch sử hoạt động (lọc entityType/entityId + phân trang) + link sidebar; footer hiện `/health` (`db:up`) ở cả 2 layout.
 4. Rehearsal E2E: customer đặt → admin Confirmed/Ongoing/Completed → customer thấy timeline đổi.
 
 **Yêu cầu đạt:** Vòng đặt → duyệt → tracking chạy thật end-to-end.

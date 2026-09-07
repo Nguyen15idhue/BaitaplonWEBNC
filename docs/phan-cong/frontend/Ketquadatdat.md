@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin)
-* Nhánh/commit: main, chưa commit/push F3 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (F3 xong code + build + API; thao tác chờ click tay)
+* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin) + agent (F4 hoàn thiện)
+* Nhánh/commit: main, chưa commit/push F4 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (F4 xong; chỉ còn F5 polish)
 * BE đối chiếu: Health, Auth, Users, Audit (B2), Tours, Prices, Images, Destinations (B3), Bookings, Checkouts (B4), NFR + rehearsal (B5) — Swagger đủ 23 paths, k6 p95=68.79ms
 * Tài khoản test API thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
 
@@ -139,25 +139,28 @@
 
 ---
 
-## F4. Hoàn thiện luồng — CHƯA (mỏng: F2/F3 đã đấu thật, chỉ chuẩn hóa + E2E)
+## F4. Hoàn thiện luồng — XONG (audit page + footer health + E2E, chờ click tay)
 
-### File đã tạo/sửa (dự kiến)
+### File đã tạo/sửa
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| Xóa mock sót (giữ mock Failed + lỗi/rỗng) | Sửa | Không sửa component | ☐ |
-| `src/services/api.ts + common Toast` | Sửa | Chuẩn hóa toast Phụ lục C, không stack trace | ☐ |
-| Audit view + health check | Tạo/sửa | `GET /audit-logs` lịch sử giá/status/role/lock; `/health db:up` ở footer/admin | ☐ |
+| Rà mock + toast | Kiểm tra | Chỉ còn `paymentMethod: "Mock"` đúng contract; mọi catch dùng toastForApiError, không console/stack | ☑ |
+| `src/services/auditApi.ts` | Sửa | Thêm `pageAuditLogs` lọc + phân trang đầy đủ | ☑ |
+| `src/pages/admin/AuditLogs.tsx` | Tạo | Trang lịch sử hoạt động: lọc entityType/entityId + Table + Pagination | ☑ |
+| `src/components/layout/layouts.tsx` | Sửa | Sidebar thêm Audit logs; Footer hiện DB status từ /health ở cả 2 layout | ☑ |
+| `src/App.tsx` | Sửa | Route /admin/audit-logs | ☑ |
 
 ### Kết quả test
 
 | Checklist F4 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Toast đúng mã BE, không stack trace | | | |
-| E2E đặt -> duyệt -> tracking | | bookingId=... | BE B4 xong, làm được ngay |
-| F5 giữ login; refresh hết mới văng (re-test F1b) | | | |
+| Toast đúng mã BE, không stack trace | PASS | Grep: mọi catch pages dùng toastForApiError, 0 console.log/error | Đã chuẩn từ F1-F3 |
+| Audit page + footer health | PASS | `/admin/audit-logs` 200; audit-all/filter 200, customer 403; `/health` qua Nginx db:up | Footer render client-side |
+| E2E đặt -> duyệt -> tracking | PASS | register→book Paid→Confirm→Ongoing→Completed→tracking 5 mốc→audit 4 rows (bookingId=10) | Dữ liệu E2E + user rác đã dọn, DB về seed |
+| F5 giữ login; refresh hết mới văng (re-test F1b) | PASS (code) | Interceptor + persist me không đổi từ F1b | Chờ click tay |
 
-**Ghi chú:** Đổi contract phải sửa đồng thời `docs/api.md` + DTO BE + Types FE.
+**Ghi chú:** Chưa push git.
 
 ---
 
