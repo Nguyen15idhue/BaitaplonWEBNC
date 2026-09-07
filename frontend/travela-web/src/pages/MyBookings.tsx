@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { cancelBooking, getBooking, getMyBookings } from "../services/bookingApi";
 import type { Booking } from "../types";
 import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../components/common/common";
 import { Card, Badge } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Select } from "../components/ui/fields";
+import { Field, Select } from "../components/ui/fields";
 import { Dialog } from "../components/ui/dialog";
 import { useToast, toastForApiError } from "../components/ui/toast";
 import { formatVND, bookingTone } from "../lib/format";
+import { label, BOOKING_STATUS_LABEL } from "../lib/labels";
 
 const STATUSES = ["", "PendingPayment", "Paid", "Confirmed", "Ongoing", "Completed", "Cancelled"];
 
@@ -73,16 +75,18 @@ export function MyBookings() {
 
   return (
     <div>
-      <PageHeader title="Booking của tôi" />
+      <PageHeader title="Chuyến của tôi" />
       <div className="mb-4 max-w-xs">
-        <Select value={status} onChange={(e) => changeStatus(e.target.value)}>
-          <option value="">Tất cả trạng thái</option>
-          {STATUSES.filter(Boolean).map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </Select>
+        <Field label="Trạng thái">
+          <Select value={status} onChange={(e) => changeStatus(e.target.value)}>
+            <option value="">Tất cả trạng thái</option>
+            {STATUSES.filter(Boolean).map((s) => (
+              <option key={s} value={s}>
+                {label(BOOKING_STATUS_LABEL, s)}
+              </option>
+            ))}
+          </Select>
+        </Field>
       </div>
 
       {loading ? (
@@ -90,7 +94,14 @@ export function MyBookings() {
       ) : error ? (
         <ErrorState message={error} />
       ) : items.length === 0 ? (
-        <EmptyState message="Bạn chưa có booking nào." />
+        <EmptyState
+          message="Bạn chưa có chuyến đi nào."
+          action={
+            <Link to="/tours">
+              <Button>Xem tour ngay</Button>
+            </Link>
+          }
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -102,7 +113,7 @@ export function MyBookings() {
                   {b.checkout ? ` · ${formatVND(b.checkout.amount)}` : ""}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
-                  <Badge tone={bookingTone(b.status)}>{b.status}</Badge>
+                  <Badge tone={bookingTone(b.status)}>{label(BOOKING_STATUS_LABEL, b.status)}</Badge>
                   <Button variant="outline" onClick={() => openDetail(b.id)}>
                     Chi tiết
                   </Button>
@@ -125,7 +136,7 @@ export function MyBookings() {
             <p>Tour: {detail.tourName}</p>
             <p>Số lượng: {detail.quantity}</p>
             <p>
-              Trạng thái: <Badge tone={bookingTone(detail.status)}>{detail.status}</Badge>
+              Trạng thái: <Badge tone={bookingTone(detail.status)}>{label(BOOKING_STATUS_LABEL, detail.status)}</Badge>
             </p>
             <h3 className="mt-2 font-semibold">Lịch trình:</h3>
             {detail.tracking.length === 0 ? (
@@ -134,7 +145,7 @@ export function MyBookings() {
               <ul className="flex flex-col gap-1">
                 {detail.tracking.map((t, i) => (
                   <li key={i} className="text-[#64748B]">
-                    <Badge tone="muted">{t.status}</Badge> {new Date(t.at).toLocaleString("vi-VN")} · bởi {t.by}
+                    <Badge tone="muted">{label(BOOKING_STATUS_LABEL, t.status)}</Badge> {new Date(t.at).toLocaleString("vi-VN")} · bởi {t.by}
                     {t.note ? ` · ${t.note}` : ""}
                   </li>
                 ))}

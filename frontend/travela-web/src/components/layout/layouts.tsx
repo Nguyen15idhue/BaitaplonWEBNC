@@ -22,18 +22,18 @@ function Footer() {
 }
 
 const MAIN_LINKS = [
-  { to: "/tours", label: "Tours" },
+  { to: "/tours", label: "Tour" },
   { to: "/destinations", label: "Điểm đến" },
-  { to: "/my-bookings", label: "My bookings" },
+  { to: "/my-bookings", label: "Chuyến của tôi" },
 ];
 
 const ADMIN_LINKS = [
-  { to: "/admin", label: "Dashboard" },
-  { to: "/admin/users", label: "Users" },
-  { to: "/admin/tours", label: "Tours" },
-  { to: "/admin/destinations", label: "Destinations" },
-  { to: "/admin/bookings", label: "Bookings" },
-  { to: "/admin/audit-logs", label: "Audit logs" },
+  { to: "/admin", label: "Tổng quan" },
+  { to: "/admin/users", label: "Người dùng" },
+  { to: "/admin/tours", label: "Tour" },
+  { to: "/admin/destinations", label: "Điểm đến" },
+  { to: "/admin/bookings", label: "Đơn đặt" },
+  { to: "/admin/audit-logs", label: "Lịch sử" },
 ];
 
 function Header() {

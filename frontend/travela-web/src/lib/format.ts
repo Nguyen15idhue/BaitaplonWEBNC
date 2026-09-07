@@ -1,5 +1,6 @@
-// Format tiền VND dùng chung (giá BE trả là VND).
+// Format tiền VND dùng chung (giá BE trả là VND). Giá 0/chưa có → "Liên hệ".
 export function formatVND(value: number): string {
+  if (!value || value <= 0) return "Liên hệ";
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",

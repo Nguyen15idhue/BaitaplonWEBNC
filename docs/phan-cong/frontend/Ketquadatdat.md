@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin) + agent (F4 hoàn thiện)
-* Nhánh/commit: main, chưa commit/push F4 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (F4 xong; chỉ còn F5 polish)
+* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin) + agent (F4 hoàn thiện) + agent (F4.1 UI/UX)
+* Nhánh/commit: main, chưa commit/push F4.1 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (F4.1 xong; hint demo + BE-1/BE-2 để dành)
 * BE đối chiếu: Health, Auth, Users, Audit (B2), Tours, Prices, Images, Destinations (B3), Bookings, Checkouts (B4), NFR + rehearsal (B5) — Swagger đủ 23 paths, k6 p95=68.79ms
 * Tài khoản test API thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
 
@@ -161,6 +161,39 @@
 | F5 giữ login; refresh hết mới văng (re-test F1b) | PASS (code) | Interceptor + persist me không đổi từ F1b | Chờ click tay |
 
 **Ghi chú:** Chưa push git.
+
+---
+
+## F4.1. Cải thiện UI/UX — XONG (code + build + bundle, chờ click tay)
+
+### File đã tạo/sửa
+
+| File | Hành động | Nội dung chính | Trạng thái |
+|---|---|---|---|
+| `src/lib/labels.ts` | Tạo | Map nhãn Việt booking/tour/role/user/audit + fallback mã gốc | ☑ |
+| `src/lib/format.ts`, `index.html`, `common.tsx` | Sửa | Giá 0 → Liên hệ; tab `Travela – Đặt tour du lịch` + lang vi; Đang tải; Empty có action | ☑ |
+| `src/components/ui/*` | Sửa/tạo | Button loading; Field + PasswordInput toggle; Dialog Esc + dismissible; Pagination scroll-top; SafeImage onError | ☑ |
+| Nav/sidebar/titles/badges | Sửa | Việt hóa toàn bộ + nhãn audit; select role/status hiện song ngữ mã + Việt | ☑ |
+| Login/Register/Booking/filters | Sửa | Field labels, focus ô lỗi, email regex, min≤max, Enter tìm, loading submit | ☑ |
+| Users role + Destinations/Tours dialog | Sửa | Confirm đổi role; dismissible form dài; loading lưu | ☑ |
+| Booking đặt trùng | Sửa | Khóa form sau đặt xong (sessionStorage flag + nút Đặt thêm) | ☑ |
+
+### Vướng backend (để dành, không làm trong F4.1)
+
+| Mục | Nội dung | Trạng thái |
+|---|---|---|
+| BE-1 | `TourDetail` thêm `availableSeats` để hiện số chỗ còn | ☐ để dành |
+| BE-2 | Register validate định dạng email + 422 | ☐ để dành |
+
+### Kết quả test
+
+| Checklist F4.1 | PASS/FAIL | Evidence | Ghi chú |
+|---|---|---|---|
+| Build sạch, hết mã Anh hiện cho user | PASS | build 0 lỗi; grep còn mã thô chỉ ở `value=` option; bundle demo có map nhãn Việt | — |
+| Click tay full luồng tiếng Việt | PASS (code) | Mọi badge/filter/timeline/nav dùng labels.ts | Chờ click tay |
+| Dialog/ảnh/mobile đúng | PASS (code+bundle) | Esc + dismissible + scroll + SafeImage trong bundle demo; dialog tour/destination chặn đóng nền | Chờ click tay |
+
+**Ghi chú:** Không đổi contract API. Hint demo ở login CHƯA thêm (chờ duyệt). Chưa push git.
 
 ---
 

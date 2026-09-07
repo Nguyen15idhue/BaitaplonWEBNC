@@ -9,11 +9,12 @@ import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog 
 import { Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
-import { Input, Textarea, Select, FieldError } from "../../components/ui/fields";
+import { Input, Textarea, Select, Field, FieldError } from "../../components/ui/fields";
 import { Dialog } from "../../components/ui/dialog";
 import { Tabs, TabPanel } from "../../components/ui/tabs";
 import { useToast, toastForApiError } from "../../components/ui/toast";
 import { formatVND } from "../../lib/format";
+import { label, TOUR_STATUS_LABEL } from "../../lib/labels";
 
 const EMPTY_FORM: TourForm = { tourName: "", description: "", destinationId: 0, maxSeats: 20, status: "Draft" };
 
@@ -35,6 +36,7 @@ export function AdminTours() {
   const [priceForm, setPriceForm] = useState({ sourceName: "Website", priceValue: "", effectiveDate: "" });
   const [imageForm, setImageForm] = useState({ imageUrl: "", caption: "", sortOrder: "1" });
   const [deleting, setDeleting] = useState<Tour | null>(null);
+  const [saving, setSaving] = useState(false);
   const pageSize = 12;
 
   async function load(p: number) {
@@ -110,6 +112,7 @@ export function AdminTours() {
 
   async function saveTour() {
     if (!validate()) return;
+    setSaving(true);
     try {
       if (editingId === null) {
         const created = await createTour(form);
@@ -122,6 +125,8 @@ export function AdminTours() {
       load(page);
     } catch (err) {
       toastForApiError(push, err);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -224,7 +229,7 @@ export function AdminTours() {
                 <td className="px-4 py-2">{t.tourName}</td>
                 <td className="px-4 py-2">{formatVND(t.priceFrom)}</td>
                 <td className="px-4 py-2">
-                  <Badge tone={t.status === "Published" ? "success" : "muted"}>{t.status}</Badge>
+                  <Badge tone={t.status === "Published" ? "success" : "muted"}>{label(TOUR_STATUS_LABEL, t.status)}</Badge>
                 </td>
                 <td className="px-4 py-2">
                   <div className="flex gap-2">
@@ -248,29 +253,39 @@ export function AdminTours() {
         </>
       )}
 
-      <Dialog open={dialogOpen} title={editingId === null ? "Thêm tour" : `Sửa tour #${editingId}`} onClose={() => setDialogOpen(false)}>
+      <Dialog open={dialogOpen} title={editingId === null ? "Thêm tour" : `Sửa tour #${editingId}`} onClose={() => setDialogOpen(false)} dismissible={false}>
         <Tabs tabs={["Thông tin", "Giá", "Ảnh"]} active={tab} onChange={setTab} />
         {tab === 0 && (
           <TabPanel>
             <div className="flex flex-col gap-3">
-              <Input placeholder="Tên tour (max 200)" value={form.tourName} onChange={(e) => setForm({ ...form, tourName: e.target.value })} />
-              <Textarea placeholder="Mô tả" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              <Select value={form.destinationId} onChange={(e) => setForm({ ...form, destinationId: Number(e.target.value) })}>
-                <option value={0}>Chọn điểm đến</option>
-                {destinations.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.regionName})
-                  </option>
-                ))}
-              </Select>
-              <Input type="number" min={1} placeholder="Số chỗ" value={form.maxSeats} onChange={(e) => setForm({ ...form, maxSeats: Number(e.target.value) })} />
-              <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                <option value="Draft">Draft</option>
-                <option value="Published">Published</option>
-                <option value="Hidden">Hidden</option>
-              </Select>
+              <Field label="Tên tour (tối đa 200 ký tự)">
+                <Input placeholder="VD: Vịnh Hạ Long 2N1Đ" value={form.tourName} onChange={(e) => setForm({ ...form, tourName: e.target.value })} />
+              </Field>
+              <Field label="Mô tả">
+                <Textarea placeholder="Giới thiệu tour" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </Field>
+              <Field label="Điểm đến">
+                <Select value={form.destinationId} onChange={(e) => setForm({ ...form, destinationId: Number(e.target.value) })}>
+                  <option value={0}>Chọn điểm đến</option>
+                  {destinations.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.regionName})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Số chỗ tối đa">
+                <Input type="number" min={1} placeholder="VD: 30" value={form.maxSeats} onChange={(e) => setForm({ ...form, maxSeats: Number(e.target.value) })} />
+              </Field>
+              <Field label="Trạng thái">
+                <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  <option value="Draft">Nháp (Draft)</option>
+                  <option value="Published">Đang bán (Published)</option>
+                  <option value="Hidden">Tạm ẩn (Hidden)</option>
+                </Select>
+              </Field>
               <FieldError message={fieldError} />
-              <Button onClick={saveTour}>Lưu tour</Button>
+              <Button onClick={saveTour} loading={saving}>Lưu tour</Button>
             </div>
           </TabPanel>
         )}

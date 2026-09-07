@@ -3,6 +3,7 @@ import { me } from "../services/authApi";
 import type { User } from "../types";
 import { Loading, ErrorState, PageHeader } from "../components/common/common";
 import { Card, Badge } from "../components/ui/card";
+import { label, ROLE_LABEL, USER_STATUS_LABEL } from "../lib/labels";
 
 // Profile: BE chưa có endpoint sửa own nên chỉ hiển thị từ GET /me.
 export function Profile() {
@@ -27,10 +28,10 @@ export function Profile() {
         <p className="text-sm">Username: <strong>{user.username}</strong></p>
         <p className="text-sm">Email: {user.email}</p>
         <p className="text-sm">
-          Role: <Badge tone={user.role === "Admin" ? "primary" : "muted"}>{user.role}</Badge>
+          Vai trò: <Badge tone={user.role === "Admin" ? "primary" : "muted"}>{label(ROLE_LABEL, user.role)}</Badge>
         </p>
         <p className="text-sm">
-          Trạng thái: <Badge tone={user.status === "Active" ? "success" : "danger"}>{user.status}</Badge>
+          Trạng thái: <Badge tone={user.status === "Active" ? "success" : "danger"}>{label(USER_STATUS_LABEL, user.status)}</Badge>
         </p>
       </Card>
     </div>

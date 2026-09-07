@@ -3,11 +3,16 @@ import { Dialog } from "../ui/dialog";
 import { Pagination as UiPagination } from "../ui/table";
 
 export function Loading() {
-  return <p className="text-sm text-[#64748B]">Loading...</p>;
+  return <p className="text-sm text-[#64748B]">Đang tải...</p>;
 }
 
-export function EmptyState({ message }: { message: string }) {
-  return <p className="text-sm text-[#64748B]">{message}</p>;
+export function EmptyState({ message, action }: { message: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-start gap-2">
+      <p className="text-sm text-[#64748B]">{message}</p>
+      {action}
+    </div>
+  );
 }
 
 export function ErrorState({ message }: { message: string }) {

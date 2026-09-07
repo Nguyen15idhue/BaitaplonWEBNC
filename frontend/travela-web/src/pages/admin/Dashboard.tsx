@@ -7,6 +7,7 @@ import { Loading, ErrorState, PageHeader } from "../../components/common/common"
 import { Card, Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { formatVND, bookingTone } from "../../lib/format";
+import { label, BOOKING_STATUS_LABEL } from "../../lib/labels";
 
 // Dashboard: tận dụng GET /bookings + /tours + /users, không cần API thống kê riêng.
 export function Dashboard() {
@@ -35,14 +36,14 @@ export function Dashboard() {
   if (error) return <ErrorState message={error} />;
 
   const cards = [
-    { label: "Tours", value: toursTotal },
-    { label: "Bookings", value: bookingsTotal },
-    { label: "Users", value: usersTotal },
-    { label: "Doanh thu (Paid)", value: formatVND(revenue) },
+    { label: "Tour", value: toursTotal },
+    { label: "Đơn đặt", value: bookingsTotal },
+    { label: "Người dùng", value: usersTotal },
+    { label: "Doanh thu (Đã thanh toán)", value: formatVND(revenue) },
   ];
   return (
     <div>
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Tổng quan" />
       <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
         {cards.map((c) => (
           <Card key={c.label}>
@@ -51,15 +52,15 @@ export function Dashboard() {
           </Card>
         ))}
       </div>
-      <h2 className="mb-2 text-sm font-semibold text-[#0F172A]">Booking mới nhất</h2>
-      <Table headers={["ID", "Tour", "User", "Trạng thái"]}>
+      <h2 className="mb-2 text-sm font-semibold text-[#0F172A]">Đơn mới nhất</h2>
+          <Table headers={["Mã", "Tour", "Khách", "Trạng thái"]}>
         {latest.map((b) => (
           <tr key={b.id} className="border-b border-[#E2E8F0]">
             <td className="px-4 py-2">{b.id}</td>
             <td className="px-4 py-2">{b.tourName}</td>
             <td className="px-4 py-2">{b.username}</td>
             <td className="px-4 py-2">
-              <Badge tone={bookingTone(b.status)}>{b.status}</Badge>
+              <Badge tone={bookingTone(b.status)}>{label(BOOKING_STATUS_LABEL, b.status)}</Badge>
             </td>
           </tr>
         ))}

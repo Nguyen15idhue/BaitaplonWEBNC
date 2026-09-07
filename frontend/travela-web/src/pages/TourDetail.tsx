@@ -3,10 +3,12 @@ import { Link, useParams } from "react-router-dom";
 import { getTourDetail } from "../services/tourApi";
 import type { TourDetail } from "../types";
 import { Loading, EmptyState, ErrorState, PageHeader } from "../components/common/common";
+import { SafeImage } from "../components/common/SafeImage";
 import { Card, Badge } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Table } from "../components/ui/table";
 import { formatVND } from "../lib/format";
+import { label, TOUR_STATUS_LABEL } from "../lib/labels";
 
 export function TourDetailPage() {
   const { id } = useParams();
@@ -38,20 +40,20 @@ export function TourDetailPage() {
             <EmptyState message="Tour chưa có ảnh." />
           ) : (
             <>
-              <img
-                src={images[activeImg]?.imageUrl}
+              <SafeImage
+                src={images[activeImg]?.imageUrl ?? ""}
                 alt={tour.tourName}
                 className="h-56 w-full rounded-[6px] object-cover md:h-72"
               />
               <div className="mt-2 flex gap-2 overflow-x-auto">
                 {images.map((img, i) => (
-                  <img
-                    key={img.id}
-                    src={img.imageUrl}
-                    alt={img.caption}
-                    onClick={() => setActiveImg(i)}
-                    className={`h-16 w-24 cursor-pointer rounded-[4px] object-cover ${i === activeImg ? "ring-2 ring-[#2563EB]" : ""}`}
-                  />
+                  <button key={img.id} onClick={() => setActiveImg(i)} aria-label={`Xem ảnh ${i + 1}`}>
+                    <SafeImage
+                      src={img.imageUrl}
+                      alt={img.caption}
+                      className={`h-16 w-24 rounded-[4px] object-cover ${i === activeImg ? "ring-2 ring-[#2563EB]" : ""}`}
+                    />
+                  </button>
                 ))}
               </div>
             </>
@@ -60,7 +62,7 @@ export function TourDetailPage() {
         <Card className="flex flex-col gap-2">
           <div className="flex gap-2">
             <Badge>{tour.destination?.regionName} · {tour.destination?.name}</Badge>
-            <Badge tone="success">{tour.status}</Badge>
+            <Badge tone="success">{label(TOUR_STATUS_LABEL, tour.status)}</Badge>
           </div>
           <p className="text-sm text-[#0F172A]">{tour.description}</p>
           <p className="text-sm text-[#64748B]">Số chỗ tối đa: {tour.maxSeats}</p>

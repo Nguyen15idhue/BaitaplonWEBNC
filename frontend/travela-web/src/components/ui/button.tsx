@@ -4,9 +4,10 @@ import { cn } from "../../lib/utils";
 // Button dùng chung: primary / outline / danger. Bo 6px, đúng token.
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "outline" | "danger";
+  loading?: boolean;
 };
 
-export function Button({ variant = "primary", className, ...rest }: Props) {
+export function Button({ variant = "primary", loading = false, disabled, className, children, ...rest }: Props) {
   return (
     <button
       className={cn(
@@ -16,7 +17,10 @@ export function Button({ variant = "primary", className, ...rest }: Props) {
         variant === "danger" && "bg-red-600 text-white hover:bg-red-700",
         className,
       )}
+      disabled={disabled || loading}
       {...rest}
-    />
+    >
+      {loading ? "Đang xử lý..." : children}
+    </button>
   );
 }

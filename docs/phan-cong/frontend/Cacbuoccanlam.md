@@ -134,6 +134,39 @@ Xem evidence ở `Ketquadatdat.md` (build `tsc && vite build` 0 lỗi, `localhos
 
 ---
 
+## F4.1. Cải thiện UI/UX cho người Việt ít tech (tổng hợp 2 lượt rà 2026-09-07)
+
+**Nhóm 1 — Ngôn ngữ và nhãn hiển thị:**
+1. Tạo `src/lib/labels.ts`: map trạng thái booking (`PendingPayment→Chờ thanh toán`, `Paid→Đã thanh toán`, `Confirmed→Đã xác nhận`, `Ongoing→Đang diễn ra`, `Completed→Hoàn thành`, `Cancelled→Đã hủy`), tour (`Draft→Nháp`, `Published→Đang bán`, `Hidden→Tạm ẩn`), role, vùng — dùng khắp trang thay mã thô.
+2. Việt hóa nav (Tour / Điểm đến / Chuyến của tôi), titles, `Loading...` → `Đang tải...`, tab trình duyệt `Travela – Đặt tour du lịch`.
+3. Giá `0` hiện `Liên hệ` thay vì `0 ₫`.
+
+**Nhóm 2 — Form và phản hồi:**
+4. Loading cho mọi nút submit (Login/Register/admin CRUD — Booking đã có), chống bấm 2 lần.
+5. Label thật cho input (không chỉ placeholder) + toggle hiện/ẩn mật khẩu ở Login/Register.
+6. Validate FE: email đúng định dạng, giá min ≤ max; focus vào ô lỗi đầu tiên.
+7. Ảnh `onError` fallback; EmptyState kèm nút dẫn bước tiếp (VD: hết tour → Xem tour nổi bật).
+8. Enter để tìm ở filter; scroll-top khi chuyển trang; Dialog thêm Esc đóng + prop chặn đóng nền cho form dài.
+
+**Nhóm 3 — Luồng và điều hướng:**
+9. Trang 403/404 thêm nút về trang chủ.
+10. Hint tài khoản demo trên trang login (chờ bạn duyệt mới thêm vì là credential).
+11. Khóa form đặt sau khi tạo booking xong (tránh Back trình duyệt đặt trùng).
+
+**Nhóm 4 — Vướng backend (ghi để sửa đợt BE sau, không làm trong F4.1):**
+- BE-1: `TourDetail` thiếu số chỗ còn (chỉ có `maxSeats`) → thêm `availableSeats` để trang đặt hiện "Còn X chỗ".
+- BE-2: `POST /auth/register` chưa validate định dạng email → thêm check + 422.
+- Ghi nhận (không sửa): access token của user vừa bị khóa vẫn sống tới 15p — giới hạn của JWT, chấp nhận ở V1.
+
+**Yêu cầu đạt:** người ít tech đọc hiểu mọi nhãn, không còn chữ Anh lạc, không bấm nhầm mất dữ liệu.
+**Checklist test:**
+- [ ] `npm run build` sạch; grep không còn mã trạng thái Anh hiện trực tiếp cho user
+- [ ] Click tay full luồng login/register/đặt/admin bằng tiếng Việt
+- [ ] Dialog Esc + form dài không mất khi bấm nền; ảnh lỗi vẫn đẹp; mobile/tablet
+**Ghi chú:** Không đổi contract API trong F4.1 (trừ 2 mục nhóm 4 để dành).
+
+---
+
 ## F5. Polish + Demo rehearsal (giữ nguyên)
 
 **Công việc:**

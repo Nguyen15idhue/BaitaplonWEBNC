@@ -23,12 +23,16 @@ export function Table({ headers, children }: { headers: string[]; children: Reac
 
 export function Pagination({ page, pageSize, total, onPage }: { page: number; pageSize: number; total: number; onPage: (p: number) => void }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
+  function go(p: number) {
+    onPage(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   return (
     <div className="mt-4 flex items-center gap-2 text-sm text-[#64748B]">
       <button
         className={cn("rounded-[4px] border border-[#E2E8F0] px-3 py-1", page <= 1 && "opacity-50")}
         disabled={page <= 1}
-        onClick={() => onPage(page - 1)}
+        onClick={() => go(page - 1)}
       >
         Trước
       </button>
@@ -38,7 +42,7 @@ export function Pagination({ page, pageSize, total, onPage }: { page: number; pa
       <button
         className={cn("rounded-[4px] border border-[#E2E8F0] px-3 py-1", page >= pages && "opacity-50")}
         disabled={page >= pages}
-        onClick={() => onPage(page + 1)}
+        onClick={() => go(page + 1)}
       >
         Sau
       </button>

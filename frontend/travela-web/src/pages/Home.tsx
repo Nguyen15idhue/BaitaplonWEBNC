@@ -35,7 +35,7 @@ export function Home() {
         <p className="mb-4 text-sm text-[#64748B]">Tìm kiếm, so sánh và đặt tour trực tuyến nhanh chóng.</p>
         <div className="flex justify-center gap-2">
           <Link to="/tours">
-            <Button>Xem tours</Button>
+            <Button>Xem tour</Button>
           </Link>
           <Link to="/destinations">
             <Button variant="outline">Điểm đến</Button>

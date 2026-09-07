@@ -6,6 +6,7 @@ import { Loading, ErrorState, PageHeader } from "../components/common/common";
 import { Card, Badge } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { formatVND, bookingTone } from "../lib/format";
+import { label, BOOKING_STATUS_LABEL } from "../lib/labels";
 
 export function CheckoutPage() {
   const { bookingId } = useParams();
@@ -32,7 +33,7 @@ export function CheckoutPage() {
           <p className="text-sm">Tour: {booking.tourName}</p>
           <p className="text-sm">Số lượng: {booking.quantity}</p>
           <p className="text-sm">
-            Trạng thái: <Badge tone={bookingTone(booking.status)}>{booking.status}</Badge>
+            Trạng thái: <Badge tone={bookingTone(booking.status)}>{label(BOOKING_STATUS_LABEL, booking.status)}</Badge>
           </p>
         </Card>
         <Card>
@@ -41,7 +42,7 @@ export function CheckoutPage() {
             <>
               <p className="text-sm">Số tiền: <strong>{formatVND(booking.checkout.amount)}</strong></p>
               <p className="text-sm">
-                Trạng thái: <Badge tone={booking.checkout.status === "Paid" ? "success" : "muted"}>{booking.checkout.status}</Badge>
+                Trạng thái: <Badge tone={booking.checkout.status === "Paid" ? "success" : "muted"}>{label(BOOKING_STATUS_LABEL, booking.checkout.status)}</Badge>
               </p>
               <p className="text-sm text-[#64748B]">Mã GD: {booking.checkout.transactionRef}</p>
             </>

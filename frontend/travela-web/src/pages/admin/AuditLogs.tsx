@@ -3,8 +3,9 @@ import { pageAuditLogs, type AuditLog } from "../../services/auditApi";
 import { Loading, EmptyState, ErrorState, PageHeader, Pagination } from "../../components/common/common";
 import { Card } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
-import { Input, Select } from "../../components/ui/fields";
+import { Input, Select, Field } from "../../components/ui/fields";
 import { Button } from "../../components/ui/button";
+import { label, AUDIT_ACTION_LABEL } from "../../lib/labels";
 
 const ENTITY_TYPES = ["", "User", "Tour", "Price", "Booking", "Destination"];
 
@@ -58,23 +59,32 @@ export function AuditLogs() {
     <div>
       <PageHeader title="Lịch sử hoạt động" />
       <Card className="mb-4">
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-          <Select value={entityType} onChange={(e) => setEntityType(e.target.value)}>
-            <option value="">Tất cả loại</option>
-            {ENTITY_TYPES.filter(Boolean).map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </Select>
-          <Input
-            type="number"
-            min={1}
-            placeholder="ID đối tượng"
-            value={entityId}
-            onChange={(e) => setEntityId(e.target.value)}
-          />
-          <div className="flex gap-2">
+        <div
+          className="grid grid-cols-1 gap-2 md:grid-cols-4"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") apply();
+          }}
+        >
+          <Field label="Loại đối tượng">
+            <Select value={entityType} onChange={(e) => setEntityType(e.target.value)}>
+              <option value="">Tất cả loại</option>
+              {ENTITY_TYPES.filter(Boolean).map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="ID đối tượng">
+            <Input
+              type="number"
+              min={1}
+              placeholder="VD: 5"
+              value={entityId}
+              onChange={(e) => setEntityId(e.target.value)}
+            />
+          </Field>
+          <div className="flex items-end gap-2">
             <Button onClick={apply}>Lọc</Button>
             <Button variant="outline" onClick={reset}>
               Xóa lọc
@@ -88,14 +98,14 @@ export function AuditLogs() {
       ) : error ? (
         <ErrorState message={error} />
       ) : items.length === 0 ? (
-        <EmptyState message="Chưa có audit log." />
+        <EmptyState message="Chưa có lịch sử nào khớp điều kiện lọc." />
       ) : (
         <>
           <Table headers={["ID", "Hành động", "Đối tượng", "ID", "Cũ → Mới", "Lúc"]}>
             {items.map((a) => (
               <tr key={a.id} className="border-b border-[#E2E8F0]">
                 <td className="px-4 py-2">{a.id}</td>
-                <td className="px-4 py-2">{a.action}</td>
+                <td className="px-4 py-2">{label(AUDIT_ACTION_LABEL, a.action)}</td>
                 <td className="px-4 py-2">{a.entityType}</td>
                 <td className="px-4 py-2">{a.entityId}</td>
                 <td className="px-4 py-2 text-[#64748B]">

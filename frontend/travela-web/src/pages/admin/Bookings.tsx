@@ -6,10 +6,11 @@ import { Loading, EmptyState, ErrorState, PageHeader, Pagination } from "../../c
 import { Card, Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
-import { Select, Input } from "../../components/ui/fields";
+import { Select, Input, Field } from "../../components/ui/fields";
 import { Dialog } from "../../components/ui/dialog";
 import { useToast, toastForApiError } from "../../components/ui/toast";
 import { formatVND, bookingTone } from "../../lib/format";
+import { label, BOOKING_STATUS_LABEL } from "../../lib/labels";
 
 const STATUSES = ["", "PendingPayment", "Paid", "Confirmed", "Ongoing", "Completed", "Cancelled"];
 // Gợi ý chuyển tiếp đúng state machine từ trạng thái hiện tại.
@@ -91,16 +92,18 @@ export function AdminBookings() {
 
   return (
     <div>
-      <PageHeader title="Quản lý Booking" />
+      <PageHeader title="Quản lý đơn đặt" />
       <div className="mb-4 max-w-xs">
-        <Select value={status} onChange={(e) => changeStatus(e.target.value)}>
-          <option value="">Tất cả trạng thái</option>
-          {STATUSES.filter(Boolean).map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </Select>
+        <Field label="Trạng thái">
+          <Select value={status} onChange={(e) => changeStatus(e.target.value)}>
+            <option value="">Tất cả trạng thái</option>
+            {STATUSES.filter(Boolean).map((s) => (
+              <option key={s} value={s}>
+                {label(BOOKING_STATUS_LABEL, s)}
+              </option>
+            ))}
+          </Select>
+        </Field>
       </div>
 
       {loading ? (
@@ -111,7 +114,7 @@ export function AdminBookings() {
         <EmptyState message="Không có booking." />
       ) : (
         <>
-          <Table headers={["ID", "Tour", "User", "SL", "Tiền", "Trạng thái", "Thao tác"]}>
+          <Table headers={["Mã", "Tour", "Khách", "SL", "Tiền", "Trạng thái", "Thao tác"]}>
             {items.map((b) => (
               <tr key={b.id} className="border-b border-[#E2E8F0]">
                 <td className="px-4 py-2">{b.id}</td>
@@ -120,7 +123,7 @@ export function AdminBookings() {
                 <td className="px-4 py-2">{b.quantity}</td>
                 <td className="px-4 py-2">{b.checkout ? formatVND(b.checkout.amount) : "-"}</td>
                 <td className="px-4 py-2">
-                  <Badge tone={bookingTone(b.status)}>{b.status}</Badge>
+                  <Badge tone={bookingTone(b.status)}>{label(BOOKING_STATUS_LABEL, b.status)}</Badge>
                 </td>
                 <td className="px-4 py-2">
                   <Button variant="outline" onClick={() => openDetail(b.id)}>
@@ -141,16 +144,16 @@ export function AdminBookings() {
               Tour: {detail.tourName} · User: {detail.username} · SL: {detail.quantity}
             </p>
             <p>
-              Trạng thái: <Badge tone={bookingTone(detail.status)}>{detail.status}</Badge>
+              Trạng thái: <Badge tone={bookingTone(detail.status)}>{label(BOOKING_STATUS_LABEL, detail.status)}</Badge>
             </p>
             <h3 className="font-semibold">Lịch trình:</h3>
             <ul className="flex flex-col gap-1">
-              {detail.tracking.map((t, i) => (
-                <li key={i} className="text-[#64748B]">
-                  <Badge tone="muted">{t.status}</Badge> {new Date(t.at).toLocaleString("vi-VN")} · bởi {t.by}
-                  {t.note ? ` · ${t.note}` : ""}
-                </li>
-              ))}
+                {detail.tracking.map((t, i) => (
+                  <li key={i} className="text-[#64748B]">
+                    <Badge tone="muted">{label(BOOKING_STATUS_LABEL, t.status)}</Badge> {new Date(t.at).toLocaleString("vi-VN")} · bởi {t.by}
+                    {t.note ? ` · ${t.note}` : ""}
+                  </li>
+                ))}
             </ul>
             <h3 className="font-semibold">Đổi trạng thái:</h3>
             <div className="flex gap-2">
@@ -158,7 +161,7 @@ export function AdminBookings() {
                 <option value="">Chọn...</option>
                 {(NEXT[detail.status] ?? []).map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {label(BOOKING_STATUS_LABEL, s)}
                   </option>
                 ))}
               </Select>

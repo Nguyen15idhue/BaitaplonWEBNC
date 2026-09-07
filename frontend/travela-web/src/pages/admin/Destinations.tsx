@@ -6,7 +6,7 @@ import type { Destination } from "../../types";
 import { Loading, EmptyState, ErrorState, PageHeader, ConfirmDialog } from "../../components/common/common";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
-import { Input, Textarea, Select, FieldError } from "../../components/ui/fields";
+import { Input, Textarea, Select, Field, FieldError } from "../../components/ui/fields";
 import { Dialog } from "../../components/ui/dialog";
 import { useToast, toastForApiError } from "../../components/ui/toast";
 
@@ -22,6 +22,7 @@ export function AdminDestinations() {
   const [form, setForm] = useState({ name: "", regionName: "Bắc", description: "" });
   const [fieldError, setFieldError] = useState("");
   const [deleting, setDeleting] = useState<Destination | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -58,6 +59,8 @@ export function AdminDestinations() {
       setFieldError("Tên điểm đến bắt buộc.");
       return;
     }
+    setFieldError("");
+    setSaving(true);
     try {
       if (editingId === null) await createDestination(form);
       else await updateDestination(editingId, form);
@@ -66,6 +69,8 @@ export function AdminDestinations() {
       load();
     } catch (err) {
       toastForApiError(push, err);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -116,19 +121,25 @@ export function AdminDestinations() {
         </Table>
       )}
 
-      <Dialog open={open} title={editingId === null ? "Thêm điểm đến" : `Sửa #${editingId}`} onClose={() => setOpen(false)}>
+      <Dialog open={open} title={editingId === null ? "Thêm điểm đến" : `Sửa #${editingId}`} onClose={() => setOpen(false)} dismissible={false}>
         <div className="flex flex-col gap-3">
-          <Input placeholder="Tên điểm đến" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <Select value={form.regionName} onChange={(e) => setForm({ ...form, regionName: e.target.value })}>
-            {REGIONS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </Select>
-          <Textarea placeholder="Mô tả" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <Field label="Tên điểm đến">
+            <Input placeholder="VD: Đà Lạt" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </Field>
+          <Field label="Vùng miền">
+            <Select value={form.regionName} onChange={(e) => setForm({ ...form, regionName: e.target.value })}>
+              {REGIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Mô tả">
+            <Textarea placeholder="Giới thiệu ngắn" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </Field>
           <FieldError message={fieldError} />
-          <Button onClick={save}>Lưu</Button>
+          <Button onClick={save} loading={saving}>Lưu</Button>
         </div>
       </Dialog>
 

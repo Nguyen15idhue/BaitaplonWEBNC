@@ -6,8 +6,9 @@ import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog 
 import { Card, Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
-import { Input, Select } from "../../components/ui/fields";
+import { Input, Select, Field } from "../../components/ui/fields";
 import { useToast, toastForApiError } from "../../components/ui/toast";
+import { label, ROLE_LABEL, USER_STATUS_LABEL } from "../../lib/labels";
 
 export function AdminUsers() {
   const { user: me } = useAuth();
@@ -19,6 +20,7 @@ export function AdminUsers() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [locking, setLocking] = useState<User | null>(null);
+  const [pendingRole, setPendingRole] = useState<{ u: User; role: "Admin" | "Customer" } | null>(null);
   const pageSize = 12;
 
   async function load(p: number, s: string) {
@@ -54,11 +56,15 @@ export function AdminUsers() {
     }
   }
 
-  async function changeRole(u: User, role: "Admin" | "Customer") {
-    if (u.role === role) return;
+  async function confirmRole() {
+    if (!pendingRole || pendingRole.u.role === pendingRole.role) {
+      setPendingRole(null);
+      return;
+    }
     try {
-      await updateUserRole(u.id, role);
-      push("Đã đổi role.", "success");
+      await updateUserRole(pendingRole.u.id, pendingRole.role);
+      push("Đã đổi quyền.", "success");
+      setPendingRole(null);
       load(page, search);
     } catch (err) {
       toastForApiError(push, err);
@@ -67,14 +73,21 @@ export function AdminUsers() {
 
   return (
     <div>
-      <PageHeader title="Quản lý User" />
+      <PageHeader title="Quản lý người dùng" />
       <Card className="mb-4">
-        <div className="flex gap-2">
-          <Input
-            placeholder="Tìm username hoặc email"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Field label="Tìm kiếm">
+              <Input
+                placeholder="Tên đăng nhập hoặc email"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") load(1, search);
+                }}
+              />
+            </Field>
+          </div>
           <Button onClick={() => load(1, search)}>Tìm</Button>
         </div>
       </Card>
@@ -87,7 +100,7 @@ export function AdminUsers() {
         <EmptyState message="Không có user." />
       ) : (
         <>
-          <Table headers={["ID", "Username", "Email", "Role", "Trạng thái", "Thao tác"]}>
+          <Table headers={["Mã", "Tên đăng nhập", "Email", "Quyền", "Trạng thái", "Thao tác"]}>
             {items.map((u) => {
               const isMe = me?.id === u.id;
               return (
@@ -99,14 +112,14 @@ export function AdminUsers() {
                     <Select
                       value={u.role}
                       disabled={isMe}
-                      onChange={(e) => changeRole(u, e.target.value as "Admin" | "Customer")}
+                      onChange={(e) => setPendingRole({ u, role: e.target.value as "Admin" | "Customer" })}
                     >
-                      <option value="Admin">Admin</option>
-                      <option value="Customer">Customer</option>
+                      <option value="Admin">Quản trị (Admin)</option>
+                      <option value="Customer">Khách hàng (Customer)</option>
                     </Select>
                   </td>
                   <td className="px-4 py-2">
-                    <Badge tone={u.status === "Active" ? "success" : "danger"}>{u.status}</Badge>
+                    <Badge tone={u.status === "Active" ? "success" : "danger"}>{label(USER_STATUS_LABEL, u.status)}</Badge>
                   </td>
                   <td className="px-4 py-2">
                     <Button variant="outline" disabled={isMe} onClick={() => setLocking(u)} title={isMe ? "Không thể tự khóa" : ""}>
@@ -127,6 +140,13 @@ export function AdminUsers() {
         message={`Xác nhận thao tác với ${locking?.username}?`}
         onConfirm={toggleLock}
         onClose={() => setLocking(null)}
+      />
+      <ConfirmDialog
+        open={!!pendingRole}
+        title="Đổi quyền"
+        message={`Đổi ${pendingRole?.u.username} sang ${pendingRole ? label(ROLE_LABEL, pendingRole.role) : ""}?`}
+        onConfirm={confirmRole}
+        onClose={() => setPendingRole(null)}
       />
     </div>
   );
