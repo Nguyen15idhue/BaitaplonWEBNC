@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { Button } from "../ui/button";
@@ -21,6 +21,16 @@ function Footer() {
   );
 }
 
+function isActive(path: string, current: string) {
+  return current === path || current.startsWith(path + "/");
+}
+
+function activeClass(path: string, current: string) {
+  return isActive(path, current)
+    ? "text-[#2563EB] font-medium"
+    : "text-[#0F172A] hover:text-[#2563EB]";
+}
+
 const MAIN_LINKS = [
   { to: "/tours", label: "Tour" },
   { to: "/destinations", label: "Điểm đến" },
@@ -39,6 +49,7 @@ const ADMIN_LINKS = [
 function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -56,12 +67,12 @@ function Header() {
         </Link>
         <nav className="hidden items-center gap-4 text-sm md:flex">
           {MAIN_LINKS.map((l) => (
-            <Link key={l.to} to={l.to} className="text-[#0F172A]">
+            <Link key={l.to} to={l.to} className={activeClass(l.to, location.pathname)}>
               {l.label}
             </Link>
           ))}
           {user?.role === "Admin" && (
-            <Link to="/admin" className="text-[#0F172A]">
+            <Link to="/admin" className={activeClass("/admin", location.pathname)}>
               Admin
             </Link>
           )}
@@ -94,7 +105,10 @@ function Header() {
               key={l.to}
               to={l.to}
               onClick={() => setOpen(false)}
-              className="rounded-[4px] px-3 py-2 text-[#0F172A] hover:bg-[#F1F5F9]"
+              className={cn(
+                "rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]",
+                isActive(l.to, location.pathname) ? "text-[#2563EB] bg-[#EFF6FF] font-medium" : "text-[#0F172A]",
+              )}
             >
               {l.label}
             </Link>
@@ -103,7 +117,10 @@ function Header() {
             <Link
               to="/admin"
               onClick={() => setOpen(false)}
-              className="rounded-[4px] px-3 py-2 text-[#0F172A] hover:bg-[#F1F5F9]"
+              className={cn(
+                "rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]",
+                isActive("/admin", location.pathname) ? "text-[#2563EB] bg-[#EFF6FF] font-medium" : "text-[#0F172A]",
+              )}
             >
               Admin
             </Link>
@@ -127,6 +144,7 @@ export function AppLayout() {
 }
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const location = useLocation();
   return (
     <nav className="flex flex-col gap-1 text-sm">
       {ADMIN_LINKS.map((l) => (
@@ -134,7 +152,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           key={l.to}
           to={l.to}
           onClick={onNavigate}
-          className="rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]"
+          className={cn(
+            "rounded-[4px] px-3 py-2 hover:bg-[#F1F5F9]",
+            isActive(l.to, location.pathname) ? "bg-[#EFF6FF] text-[#2563EB] font-medium" : "text-[#0F172A]",
+          )}
         >
           {l.label}
         </Link>
