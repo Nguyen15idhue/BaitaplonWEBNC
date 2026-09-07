@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) + agent (B2 Auth) | BE2: agent (B3 Tours) + agent (B4 Booking)
-* Commit/nhánh: main, chưa commit/push B4 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (B4 xong)
+* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) + agent (B2 Auth) | BE2: agent (B3 Tours) + agent (B4 Booking) | B5: agent (cả 2)
+* Commit/nhánh: main, chưa commit/push B5 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (B5 xong, backend hoàn tất B0-B5)
 
 ---
 
@@ -164,17 +164,18 @@
 
 | File | Hành động | Nội dung chính | Người | Trạng thái |
 |---|---|---|---|---|
-| `Program.cs, appsettings.json` | | CORS, Swagger Bearer, Pomelo | | ☐/☑ |
-| `docs/api.md` | | Cập nhật khớp code | | ☐/☑ |
-| `k6/tours-test.js` | | Script NFR | | ☐/☑ |
+| `Program.cs` | Sửa | JSON camelCase chốt rõ (khớp Types FE) | agent (BE) | ☑ |
+| `docs/api.md` | Sửa | Lật toàn bộ endpoint sang [x] khớp code B2-B4 | agent (BE) | ☑ |
+| `k6/tours-test.js` | Tạo | NFR 30 VUs ~1000 req/phút 2 phút, ngưỡng p95<500ms | agent (BE) | ☑ |
+| `.env.example` | Sửa | Ghi rõ cổng host thực tế (MySQL 3307, BE 5000, FE 3001) | agent (BE) | ☑ |
 
 ### Kết quả test
 
 | Checklist B5 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Compose fresh 3 Up | | | |
-| k6 p95 <500ms | | p95=...ms | |
-| Full flow E2E Swagger | | | |
-| .env không commit | | | |
+| Compose fresh 3 Up | PASS | `down -v` rồi `up --build`: 3 Up, `/health` db=up, seed đủ | Rehearsal từ volume trắng |
+| k6 p95 <500ms | PASS | p95=68.79ms, 83869 req, 0 failed, 100% check | k6 v2.2.0 portable (máy chưa có sẵn) |
+| Full flow E2E Swagger | PASS | register->login->book Paid trace2->Confirm->Ongoing->Completed->tracking 5 mốc->audit 4 rows | Dữ liệu E2E đã dọn, DB về seed |
+| .env không commit | PASS | Không có file .env, `.env.example` đủ MYSQL_* + JWT_SECRET | `git status` sạch secret |
 
-**Ghi chú:** ...
+**Ghi chú:** Swagger có đủ 23 paths (22 API + /health). Không thêm lib mới ở B5 (k6 là tool ngoài). Backend xong toàn bộ B0-B5.

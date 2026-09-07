@@ -95,8 +95,8 @@ Login trả thêm `user` (tiện cho FE, không phá contract).
 ## Tổng hợp tiến độ (2026-09-07)
 
 - Hoàn thành: Health (B0+B1), Auth + Users + Audit (B2), Destinations + Tours + Prices + Images (B3),
-  Bookings + Checkouts + Tracking (B4).
-- Còn lại: B5 cứng hóa + NFR + rehearsal Docker.
+  Bookings + Checkouts + Tracking (B4), cứng hóa + NFR + rehearsal (B5).
+- Backend xong toàn bộ. Swagger đủ 23 paths. k6 p95=68.79ms.
 
 ---
 

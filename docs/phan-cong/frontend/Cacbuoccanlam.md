@@ -1,27 +1,29 @@
 # FRONTEND — Các bước cần làm (Cacbuoccanlam)
 
 > Team: 1 người (FE). Khung `travela-web` + Nginx đã có sẵn, F0 đã xong (xem `Ketquadatdat.md`).
-> Cập nhật 2026-09-07: BE đã xong **Auth + Users + Audit + Health** (`docs/phan-cong/backend/api.md` mục 1-4).
-> → FE **đấu Auth thật ngay từ F1**, không mock login nữa. Tours/Destinations/Bookings/Checkouts vẫn mock.
-> Tra cứu duy nhất khi đấu nối: `docs/phan-cong/backend/api.md` + Phụ lục A (JSON mock), B (enum/query), C (mã lỗi → toast).
+> Cập nhật 2026-09-07 (lần 2): BE đã xong **toàn bộ B0-B5** (`docs/phan-cong/backend/api.md`:
+> Health, Auth, Users, Audit, Destinations, Tours, Prices, Images, Bookings, Checkouts + k6 p95=68.79ms).
+> → FE **đấu API thật toàn bộ từ F1, không mock** (chỉ giữ mock cho nhánh checkout Failed
+> vì mock payment V1 luôn Paid, và cho trạng thái lỗi/rỗng khó dựng bằng data thật).
+> Tra cứu duy nhất khi đấu nối: `docs/phan-cong/backend/api.md` + Phụ lục A (JSON mẫu), B (enum/query), C (mã lỗi → toast).
 > Cổng thực tế: FE `localhost:3001` (3000 bị chiếm), BE `localhost:5000`, MySQL host `3307`.
 > Quy ước mã nguồn hiện tại (bắt buộc): mọi gọi API qua `src/services/*` (axios `baseURL=/api`), không `fetch` trực tiếp trong component. Types ở `src/types/index.ts` camelCase khớp DTO BE. Guard ở `src/routes/guards.tsx`, token ở `src/lib/auth-store.ts`, layout ở `src/components/layout/layouts.tsx`, dùng chung ở `src/components/common/common.tsx`. Design tokens ở `src/index.css` + `docs/design-system.md`.
 
 ---
 
-## Bản đồ trang → API (đối chiếu `docs/phan-cong/backend/api.md` ngày 2026-09-07)
+## Bản đồ trang → API (đối chiếu `docs/phan-cong/backend/api.md` ngày 2026-09-07 — BE xong hết)
 
 | Trang FE | Endpoint BE | Trạng thái BE | Cách làm FE từ giờ |
 |---|---|---|---|
 | `/login`, `/register` | POST /api/auth/register, POST /api/auth/login, GET /api/auth/me | **Hoàn thành (B2)** | **Đấu thật ở F1b.** Xóa `loginMock` trong `src/services/authApi.ts`, thay bằng `register/login/refresh/logout/me` thật. Contract V1: refresh/logout nhận `{ refreshToken }` body, FE lưu ở localStorage (cookie HttpOnly để V2). Login trả thêm `user` |
 | Guard + persist login | GET /api/auth/me, POST /api/auth/refresh | **Hoàn thành (B2)** | **Đấu thật ở F1b.** Interceptor `src/services/api.ts`: gắn Bearer, 401 → gọi `/auth/refresh` 1 lần → retry, fail → logout về `/login`. `ProtectedRoute/RoleGuard` + `GET /me` khi F5 |
 | `/admin/users` | GET /api/users, PUT /api/users/{id}/role, PUT /api/users/{id}/lock | **Hoàn thành (B2, Admin)** | **Đấu thật ở F3.** Không mock table nữa. Request: role `{ role: Admin\|Customer }`, lock `{ locked: true\|false }`. Lỗi `SELF_ACTION_DENIED` 400 khi tự khóa/hạ quyền mình |
-| `/admin` audit view | GET /api/audit-logs?entityType&entityId&page&pageSize | **Hoàn thành (B2, Admin)** | Đấu thật ở F3/F4 nếu còn giờ (hiện lịch sử đổi role/lock, sau này thêm giá/status) |
-| `/`, `/tours`, `/tours/:id` | GET /api/tours, GET /api/tours/{id}, GET /api/destinations | Tạm/Chưa (placeholder rỗng, B3 làm thật) | Mock theo Phụ lục A, đấu thật khi B3 xong. `priceFrom` BE trả, FE không tự tính |
-| `/booking/:tourId`, `/checkout/:bookingId` | POST /api/bookings, GET /api/checkouts/{id} | Chưa (B4) | Mock + validate FE, đấu thật khi B4 xong |
-| `/my-bookings` | GET /api/bookings, GET /api/bookings/{id} | Chưa (B4) | Mock tracking timeline, đấu thật khi B4 xong |
-| `/admin/tours`, `/admin/destinations` | CRUD tours/prices/images/destinations | Chưa (B3) | Mock, đấu thật khi B3 xong |
-| `/admin/bookings` | GET /api/bookings, PUT status/cancel | Chưa (B4) | Mock state machine, đấu thật khi B4 xong |
+| `/admin` audit view | GET /api/audit-logs?entityType&entityId&page&pageSize | **Hoàn thành (B2, Admin)** | **Đấu thật ở F3/F4.** Hiện lịch sử đổi role/lock/giá/status |
+| `/`, `/tours`, `/tours/:id` | GET /api/tours, GET /api/tours/{id}, GET /api/destinations | **Hoàn thành (B3)** | **Đấu thật ở F2.** `priceFrom` BE trả, FE không tự tính. Query đúng Phụ lục B |
+| `/booking/:tourId`, `/checkout/:bookingId` | POST /api/bookings, GET /api/checkouts/{id} | **Hoàn thành (B4)** | **Đấu thật ở F2.** Validate FE + toast 409 `NOT_ENOUGH_SEATS`. Nhánh Failed chỉ test bằng mock |
+| `/my-bookings` | GET /api/bookings, GET /api/bookings/{id} | **Hoàn thành (B4)** | **Đấu thật ở F2.** Timeline tracking thật |
+| `/admin/tours`, `/admin/destinations` | CRUD tours/prices/images/destinations | **Hoàn thành (B3)** | **Đấu thật ở F3.** Validate FE trùng BE |
+| `/admin/bookings` | GET /api/bookings, PUT status/cancel | **Hoàn thành (B4)** | **Đấu thật ở F3.** Đúng state machine + note |
 | `/admin` Dashboard | Tận dụng GET /api/bookings + GET /api/tours | — | Không cần API thống kê riêng |
 
 Tài khoản seed để test Auth thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`.
@@ -48,7 +50,7 @@ Xem evidence ở `Ketquadatdat.md` (build `tsc && vite build` 0 lỗi, `localhos
 1. Cài/verify Tailwind + shadcn (`Button, Input, Textarea, Select, Checkbox, Dialog, Dropdown, Badge, Card, Table, Pagination, Tabs, Toast`) + Lucide + React Router (đã có). Nếu không cài được shadcn thì giữ `components/ui/*` tối thiểu Button/Input/Dialog/Table/Toast đúng token.
 2. Áp `docs/design-system.md` + `src/index.css`: Inter, Primary `#2563EB`, BG `#F8FAFC`, Text `#0F172A`, Muted `#64748B`, Border `#E2E8F0`, Radius 4/6/8, Spacing 4/8/12/16/24/32/48. Cấm gradient/glassmorphism.
 3. Mở rộng `components/layout/layouts.tsx` (`AppLayout, AdminLayout, Header, Sidebar, PageContainer`), `components/common/common.tsx` (thêm `ConfirmDialog, Pagination, Toast` dùng chung).
-4. Mock data đúng Types cho Tours/Bookings (theo Phụ lục A backend/api.md) để làm F2/F3 không đợi B3/B4.
+4. Chỉ giữ mock tối thiểu cho nhánh checkout Failed và trạng thái lỗi/rỗng (BE đã xong hết nên F2/F3 đấu thật).
 
 **F1b. Auth thật (MỚI — làm ngay vì BE B2 xong, thay thế login mock):**
 1. `src/types/index.ts`: bổ sung `status` vào `User`; thêm `AuthResponse { accessToken, refreshToken, user }`, `ApiError { error, message }`.
@@ -71,9 +73,9 @@ Xem evidence ở `Ketquadatdat.md` (build `tsc && vite build` 0 lỗi, `localhos
 
 ---
 
-## F2. Public pages (Customer + Anonymous — vẫn mock vì B3/B4 chưa xong)
+## F2. Public pages (Customer + Anonymous — đấu thật toàn bộ vì B3/B4 xong)
 
-**Công việc (theo thứ tự, chỉ sửa `src/pages/*`, dùng `services/tourApi.ts, bookingApi.ts (mới), destinationApi.ts (mới)`):**
+**Công việc (theo thứ tự, chỉ sửa `src/pages/*`, dùng `services/tourApi.ts, bookingApi.ts (mới), destinationApi.ts (mới)` đấu thật):**
 1. `/` Home (hero + tour nổi bật + destinations) — mở rộng `Home` trong `pages.tsx`.
 2. `/tours` List: search, filter destination/min-max price, sort, Pagination (pageSize 12, max 50 theo Phụ lục B).
 3. `/tours/:id` Detail: gallery ảnh, mô tả, destination, bảng giá hiệu lực, nút Đặt.
@@ -83,47 +85,47 @@ Xem evidence ở `Ketquadatdat.md` (build `tsc && vite build` 0 lỗi, `localhos
 7. `/my-bookings` List own + filter status + xem trace timeline `{status,at,by,note}`.
 8. `/profile` (nếu còn giờ, không bắt buộc): `GET /me` + sửa own.
 
-**Yêu cầu đạt:** Anonymous xem tour (mock), Customer đặt → checkout → my-bookings thấy trace (mock).
+**Yêu cầu đạt:** Anonymous xem tour thật, Customer đặt → checkout → my-bookings thấy trace thật.
 **Checklist test:**
 - [ ] Search/filter/page trên `/tours` gọi đúng query BE (`page,pageSize,search,destinationId,minPrice,maxPrice,sort`), chuyển trang không mất filter
-- [ ] Tour hết chỗ / Hidden không hiện nút Đặt (hoặc bấm báo lỗi)
-- [ ] Booking quantity 0/âm/quá chỗ → validation FE chặn trước, BE trả 409 thì hiện toast đúng
-- [ ] Checkout Failed có nút retry; Paid hiện timeline
+- [ ] Tour hết chỗ / Hidden không hiện nút Đặt (thử đặt tour Hidden trên Swagger đối chiếu)
+- [ ] Booking quantity 0/âm/quá chỗ → validation FE chặn trước, BE trả 409 `NOT_ENOUGH_SEATS` thì hiện toast đúng
+- [ ] Checkout Paid hiện timeline; nhánh Failed chỉ test bằng mock (mock payment V1 luôn Paid)
 - [ ] Chưa login bấm Đặt → chuyển login, login xong quay lại (nhờ F1b)
-- [ ] Empty (không tour) + Error (mất mạng) hiển thị đúng component
+- [ ] Empty (search không ra) + Error (tắt backend) hiển thị đúng component
 **Ghi chú:** Giá hiển thị = `priceFrom` BE trả, FE không tự tính min từ list prices. Enum/status dùng đúng Phụ lục B (`Draft/Published/Hidden`, `PendingPayment/Paid/Confirmed/Ongoing/Completed/Cancelled`).
 
 ---
 
-## F3. Admin pages (Users đấu thật, còn lại mock)
+## F3. Admin pages (đấu thật toàn bộ vì B2+B3+B4 xong)
 
 **Công việc:**
-1. `/admin` Dashboard: cards (tổng tour/booking/users/doanh thu) + bảng booking mới nhất. Lấy từ `GET /bookings` + `GET /tours` mock (không cần API thống kê riêng).
-2. `/admin/users` — **ĐẤU THẬT (BE xong):** tạo `src/services/userApi.ts`: `list({page,pageSize,search})`, `updateRole(id,{role})`, `updateLock(id,{locked})`. Table + search username/email + pagination, actions lock/unlock + đổi role, chặn tự khóa (disable nút trên row chính mình + toast khi BE trả 400 `SELF_ACTION_DENIED`).
-3. `/admin/tours`: Table + CRUD tour (Dialog), trong edit gộp tab Prices + Images (không làm `/admin/prices` riêng). Mock, validate FE trùng BE (tên required max 200, giá >0, URL ≤500 ký tự, tối đa 10 ảnh/tour).
-4. `/admin/destinations`: CRUD đơn giản (mock).
-5. `/admin/bookings`: Table all + filter status, Dialog đổi status theo đúng thứ tự state machine + note, xem trace timeline + audit liên quan (mock; audit thật `GET /audit-logs?entityType&entityId` gắn thêm nếu còn giờ).
+1. `/admin` Dashboard: cards (tổng tour/booking/users/doanh thu) + bảng booking mới nhất. Lấy từ `GET /bookings` + `GET /tours` thật (không cần API thống kê riêng).
+2. `/admin/users` — **ĐẤU THẬT:** tạo `src/services/userApi.ts`: `list({page,pageSize,search})`, `updateRole(id,{role})`, `updateLock(id,{locked})`. Table + search username/email + pagination, actions lock/unlock + đổi role, chặn tự khóa (disable nút trên row chính mình + toast khi BE trả 400 `SELF_ACTION_DENIED`).
+3. `/admin/tours` — **ĐẤU THẬT:** Table + CRUD tour (Dialog), trong edit gộp tab Prices + Images (không làm `/admin/prices` riêng). Validate FE trùng BE.
+4. `/admin/destinations` — **ĐẤU THẬT:** CRUD đơn giản.
+5. `/admin/bookings` — **ĐẤU THẬT:** Table all + filter status, Dialog đổi status đúng state machine + note, xem trace timeline + audit (`GET /audit-logs?entityType=Booking&entityId=`).
 
-**Yêu cầu đạt:** Admin quản trị User thật end-to-end; Tour/Booking mock đúng state machine chờ B3/B4.
+**Yêu cầu đạt:** Admin quản trị hết User/Tour/Booking bằng API thật.
 **Checklist test:**
 - [ ] Search users + lock/unlock + đổi role thật đúng, tự khóa/tự hạ quyền bị chặn (400 `SELF_ACTION_DENIED`)
 - [ ] Customer cố vào `/admin/*` → 403 page, không lộ data (kế thừa F1b)
-- [ ] CRUD tour/prices/images mock validate FE trùng BE
-- [ ] Đổi status sai thứ tự → hiện lỗi `INVALID_STATUS_TRANSITION`, không crash
+- [ ] CRUD tour/prices/images thật: validation trùng BE, đổi giá xong list cập nhật ngay
+- [ ] Đổi status sai thứ tự → toast 400 `INVALID_STATUS_TRANSITION`, không crash
 - [ ] Pagination mọi bảng admin giữ được filter khi reload
 **Ghi chú:** Dùng chung `Table + Pagination + ConfirmDialog`, không custom mỗi trang 1 kiểu.
 
 ---
 
-## F4. Hoàn thiện luồng + đấu nốt khi B3/B4 xong (Auth đã xong ở F1b nên F4 nhẹ đi)
+## F4. Hoàn thiện luồng (mỏng đi vì F2/F3 đã đấu thật — chỉ còn chuẩn hóa + E2E)
 
 **Công việc:**
-1. Xóa hết mock còn sót: `tourApi.getTours/getDetail, bookingApi.create, destinationApi...` chuyển sang API thật, giữ nguyên chữ ký để không sửa component.
+1. Xóa hết mock còn sót (chỉ giữ mock cho nhánh checkout Failed và trạng thái lỗi/rỗng).
 2. Chuẩn hóa error toast toàn app theo Phụ lục C (`NOT_ENOUGH_SEATS 409, INVALID_STATUS_TRANSITION 400, VALIDATION_ERROR 422, FORBIDDEN 403...`), không hiện stack trace.
 3. Gắn audit view (lịch sử đổi giá/status/role/lock qua `GET /audit-logs`) + check `/health` (`db:up`) ở footer/admin.
-4. Rehearsal E2E: customer đặt → admin Confirmed/Ongoing/Completed → customer thấy timeline đổi (làm được khi B4 xong).
+4. Rehearsal E2E: customer đặt → admin Confirmed/Ongoing/Completed → customer thấy timeline đổi.
 
-**Yêu cầu đạt:** Vòng đặt → duyệt → tracking chạy thật end-to-end khi BE đủ B3/B4.
+**Yêu cầu đạt:** Vòng đặt → duyệt → tracking chạy thật end-to-end.
 **Checklist test:**
 - [ ] Mọi lỗi BE hiện toast đúng code, không hiện stack trace
 - [ ] E2E: customer đặt → admin Confirmed/Ongoing/Completed → customer thấy timeline đổi (ghi `bookingId=...`)

@@ -1,15 +1,15 @@
 # FRONTEND — Kết quả đã đạt (Ketquadatdat)
 
 > Người làm điền sau mỗi bước F0-F5 trong `Cacbuoccanlam.md`. Ghi PASS/FAIL + evidence (ảnh UI / log build / link commit).
-> Đồng bộ với `Cacbuoccanlam.md` bản 2026-09-07: BE đã xong Auth + Users + Audit (`docs/phan-cong/backend/api.md` mục 1-4) → FE đấu Auth thật từ F1b, Users thật ở F3. Tours/Bookings vẫn mock chờ B3/B4.
+> Đồng bộ với `Cacbuoccanlam.md` bản 2026-09-07 (lần 2): BE đã xong toàn bộ B0-B5 (`docs/phan-cong/backend/api.md`) → FE đấu API thật toàn bộ từ F1, không mock (trừ nhánh checkout Failed + trạng thái lỗi/rỗng).
 
 ## Thông tin chung
 
 * Người thực hiện FE: agent (skeleton) + bạn (F1 tiếp theo)
 * Nhánh/commit: main, chưa commit/push (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (đồng bộ Auth BE xong; F0 giữ PASS, F1-F5 reset checklist theo kế hoạch mới)
-* BE đối chiếu: Health xong, Auth/Users/Audit xong (B2 2026-09-07); Tours placeholder rỗng; Destinations/Prices/Images/Bookings/Checkouts chưa
-* Tài khoản test Auth thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
+* Ngày cập nhật: 2026-09-07 (BE xong hết B0-B5; F0 giữ PASS, F1-F5 đấu thật)
+* BE đối chiếu: Health, Auth, Users, Audit (B2), Tours, Prices, Images, Destinations (B3), Bookings, Checkouts (B4), NFR + rehearsal (B5) — Swagger đủ 23 paths, k6 p95=68.79ms
+* Tài khoản test API thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
 
 ---
 
@@ -58,7 +58,7 @@
 | `src/lib/auth-store.ts` | Sửa (F1b) | `getAccessToken/getRefreshToken/getUser/setSession/clearSession/isLoggedIn`, bỏ `role` rời | ☐ |
 | `src/routes/guards.tsx` | Sửa (F1b) | ProtectedRoute → /login; RoleGuard Admin → /403; persist F5 bằng GET /me | ☐ |
 | `src/pages/Login.tsx`, `src/pages/Register.tsx` | Sửa/tạo (F1b) | Form validate + toast theo mã BE + quay lại trang trước (`location.state.from`) | ☐ |
-| `src/services/*mock tours/bookings*` | Tạo (F1a) | Mock đúng Phụ lục A để F2/F3 không đợi B3/B4 | ☐ |
+| `src/services/*mock tối thiểu*` | Tạo (F1a) | Chỉ mock nhánh checkout Failed + lỗi/rỗng (F2/F3 đấu thật) | ☐ |
 
 ### Kết quả test
 
@@ -76,65 +76,65 @@
 
 ---
 
-## F2. Public pages — CHƯA (vẫn mock vì B3/B4 chưa xong, phụ thuộc F1b cho redirect login)
+## F2. Public pages — CHƯA (đấu thật toàn bộ vì B3/B4 xong)
 
 ### File đã tạo/sửa (dự kiến)
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| `src/pages/* (Home, TourList, TourDetail mở rộng từ pages.tsx)` | Sửa/tạo | Hero + tour nổi bật + destinations | ☐ |
-| `src/pages/Tours, Destinations, Booking, Checkout, MyBookings, Profile?` | Tạo | Search/filter/sort/pagination; form quantity; timeline `{status,at,by,note}` | ☐ |
-| `src/services/tourApi.ts, bookingApi.ts, destinationApi.ts` | Sửa/tạo | Query `page,pageSize,search,destinationId,minPrice,maxPrice,sort`; giữ chữ ký để sau thay ruột thật | ☐ |
+| `src/pages/* (Home, TourList, TourDetail mở rộng từ pages.tsx)` | Sửa/tạo | Hero + tour nổi bật + destinations (thật) | ☐ |
+| `src/pages/Tours, Destinations, Booking, Checkout, MyBookings, Profile?` | Tạo | Search/filter/sort/pagination thật; form quantity; timeline thật | ☐ |
+| `src/services/tourApi.ts, bookingApi.ts, destinationApi.ts` | Sửa/tạo (thật) | Query `page,pageSize,search,destinationId,minPrice,maxPrice,sort` | ☐ |
 
 ### Kết quả test
 
 | Checklist F2 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Search/filter/page giữ filter | | | Query đúng Phụ lục B, pageSize 12/max 50 |
-| Tour hết chỗ/Hidden chặn đặt | | | |
+| Search/filter/page giữ filter (thật) | | | Query đúng Phụ lục B, pageSize 12/max 50 |
+| Tour hết chỗ/Hidden chặn đặt | | | Đối chiếu Swagger |
 | Validation quantity + toast 409 | | | FE chặn trước, BE `NOT_ENOUGH_SEATS` sau |
-| Checkout retry Paid/Failed | | | Mock, đấu thật khi B4 xong |
+| Checkout Paid timeline; Failed mock | | | Mock payment V1 luôn Paid |
 | Chưa login -> login -> quay lại | | | Nhờ F1b `location.state.from` |
-| Empty/Error đúng component | | | |
+| Empty/Error đúng component | | | Search không ra + tắt backend |
 
 **Ghi chú:** Giá = `priceFrom` BE trả, không tự tính. Enum đúng Phụ lục B (`Draft/Published/Hidden`, `PendingPayment...Cancelled`).
 
 ---
 
-## F3. Admin pages — CHƯA (Users đấu thật, còn lại mock)
+## F3. Admin pages — CHƯA (đấu thật toàn bộ vì B2+B3+B4 xong)
 
 ### File đã tạo/sửa (dự kiến)
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| `src/pages/admin/Dashboard` | Tạo | Cards tổng tour/booking/users/doanh thu + bảng mới nhất (mock GET bookings+tours) | ☐ |
+| `src/pages/admin/Dashboard` | Tạo | Cards tổng tour/booking/users/doanh thu + bảng mới nhất (thật) | ☐ |
 | `src/services/userApi.ts` | Tạo (đấu thật) | `list({page,pageSize,search})`, `updateRole(id,{role})`, `updateLock(id,{locked})` | ☐ |
 | `src/pages/admin/Users` | Tạo (đấu thật) | Table + search + pagination + lock/unlock + đổi role; disable tự khóa + toast 400 `SELF_ACTION_DENIED` | ☐ |
-| `src/pages/admin/Tours, Destinations` | Tạo (mock) | CRUD Dialog, edit gộp tab Prices+Images; validate tên max 200, giá >0, URL ≤500, max 10 ảnh | ☐ |
-| `src/pages/admin/Bookings` | Tạo (mock + audit thật nếu còn giờ) | Filter status + đổi status đúng state machine + trace + `GET /audit-logs?entityType&entityId` | ☐ |
+| `src/pages/admin/Tours, Destinations` | Tạo (đấu thật) | CRUD Dialog, edit gộp tab Prices+Images; validate trùng BE | ☐ |
+| `src/pages/admin/Bookings` | Tạo (đấu thật) | Filter status + đổi status đúng state machine + trace + audit `GET /audit-logs?entityType&entityId` | ☐ |
 
 ### Kết quả test
 
 | Checklist F3 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Users search/lock/role thật, chặn tự khóa | | Log + ảnh ... | BE B2 xong, test bằng seed admin |
+| Users search/lock/role thật, chặn tự khóa | | Log + ảnh ... | Test bằng seed admin |
 | Customer vào admin -> 403 | | | Kế thừa F1b |
-| CRUD tour/prices/images mock validate | | | Đấu thật khi B3 xong |
-| Đổi status sai -> lỗi đẹp `INVALID_STATUS_TRANSITION` | | | Mock, không crash |
+| CRUD tour/prices/images thật | | | Đổi giá xong list cập nhật ngay |
+| Đổi status sai -> toast đẹp `INVALID_STATUS_TRANSITION` | | | Không crash |
 | Pagination giữ filter | | | |
 
 **Ghi chú:** Dùng chung `Table + Pagination + ConfirmDialog`. Audit role/lock đã có BE, gắn view nếu còn giờ.
 
 ---
 
-## F4. Hoàn thiện luồng + đấu nốt B3/B4 — CHƯA (Auth đã chuyển sang F1b nên F4 nhẹ đi)
+## F4. Hoàn thiện luồng — CHƯA (mỏng: F2/F3 đã đấu thật, chỉ chuẩn hóa + E2E)
 
 ### File đã tạo/sửa (dự kiến)
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| `src/services/tourApi, bookingApi, destinationApi` | Sửa ruột mock → thật | Giữ chữ ký, không sửa component | ☐ |
-| `src/services/api.ts + common Toast` | Sửa | Chuẩn hóa toast Phụ lục C (`NOT_ENOUGH_SEATS 409, INVALID_STATUS_TRANSITION 400, VALIDATION_ERROR 422...`), không stack trace | ☐ |
+| Xóa mock sót (giữ mock Failed + lỗi/rỗng) | Sửa | Không sửa component | ☐ |
+| `src/services/api.ts + common Toast` | Sửa | Chuẩn hóa toast Phụ lục C, không stack trace | ☐ |
 | Audit view + health check | Tạo/sửa | `GET /audit-logs` lịch sử giá/status/role/lock; `/health db:up` ở footer/admin | ☐ |
 
 ### Kết quả test
@@ -142,7 +142,7 @@
 | Checklist F4 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
 | Toast đúng mã BE, không stack trace | | | |
-| E2E đặt -> duyệt -> tracking | | bookingId=... | Làm được khi B4 xong |
+| E2E đặt -> duyệt -> tracking | | bookingId=... | BE B4 xong, làm được ngay |
 | F5 giữ login; refresh hết mới văng (re-test F1b) | | | |
 
 **Ghi chú:** Đổi contract phải sửa đồng thời `docs/api.md` + DTO BE + Types FE.

@@ -47,12 +47,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// B2: Default Deny — mọi controller yêu cầu đăng nhập trừ khi gắn [AllowAnonymous].
+// B5: JSON camelCase chốt rõ ở đây (khớp Types FE).
 builder.Services.AddControllers(options =>
 {
     var policy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
         .RequireAuthenticatedUser().Build();
     options.Filters.Add(new AuthorizeFilter(policy));
+}).AddJsonOptions(o =>
+{
+    o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    o.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
