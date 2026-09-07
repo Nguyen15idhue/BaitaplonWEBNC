@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) | BE2: chưa làm
-* Commit/nhánh: main, chưa commit/push B0 skeleton + B1 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (B0 re-verify + B1 xong)
+* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) + agent (B2 Auth) | BE2: chưa làm
+* Commit/nhánh: main, chưa commit/push B2 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (B2 xong)
 
 ---
 
@@ -75,26 +75,32 @@
 
 | File | Hành động | Nội dung chính | Người | Trạng thái |
 |---|---|---|---|---|
-| `Controllers/AuthController.cs` | | register/login/refresh/logout/me | | ☐/☑ |
-| `Controllers/UsersController.cs` | | list/role/lock | | ☐/☑ |
-| `Controllers/AuditLogsController.cs` | | | | ☐/☑ |
-| `Services/AuthService, UserService, AuditLogService` | | | | ☐/☑ |
-| `Helpers/JwtHelper.cs` | | access 15p | | ☐/☑ |
+| `Controllers/AuthController.cs` | Tạo | register/login/refresh/logout AllowAnonymous, me cần auth | agent (BE1) | ☑ |
+| `Controllers/UsersController.cs` | Tạo | Admin only: list/search/page, PUT role/lock | agent (BE1) | ☑ |
+| `Controllers/AuditLogsController.cs` | Tạo | Admin tra cứu theo entityType/entityId + page | agent (BE1) | ☑ |
+| `Controllers/ToursController.cs` | Sửa | Thêm [AllowAnonymous] giữ public sau khi bật Default Deny | agent (BE1) | ☑ |
+| `Services/AuthService, UserService, AuditLogService` | Tạo | Refresh xoay vòng + revoke chuỗi, SELF_ACTION_DENIED, audit mọi lock/role | agent (BE1) | ☑ |
+| `Helpers/JwtHelper.cs` | Tạo | Access 15p (sub/username/role), refresh raw 48 byte + hash SHA256 | agent (BE1) | ☑ |
+| `Helpers/PasswordHasher.cs` | Tạo | Bọc BCrypt hash/verify | agent (BE1) | ☑ |
+| `DTOs/Auth/AuthDtos.cs, DTOs/User/UserDtos.cs` | Tạo | Không bao giờ trả password_hash | agent (BE1) | ☑ |
+| `Program.cs` | Sửa | JWT Bearer, Default Deny toàn cục, Swagger Bearer, đăng ký 4 services | agent (BE1) | ☑ |
+| `docker-compose.yml` | Sửa | Thêm JWT_SECRET env cho backend | agent (BE1) | ☑ |
+| `Travela.Api.csproj` | Sửa | Thêm System.IdentityModel.Tokens.Jwt 8.22 + JwtBearer 10.0.11 | agent (BE1) | ☑ |
 
 ### Kết quả test
 
 | Checklist B2 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Trùng user -> 409 | | | |
-| Login đúng/sai | | | |
-| Không token -> 401, hết hạn -> 401 | | | |
-| Customer GET /users -> 403 | | | |
-| Tự khóa -> 400 SELF_ACTION_DENIED | | | |
-| Reuse refresh cũ -> 401 | | | |
-| Logout -> refresh fail | | | |
-| Audit có log lock/unlock | | | |
+| Trùng user -> 409 | PASS | register lại `admin` = 409 DUPLICATE_USER | user test đã xóa, DB còn 3 seed |
+| Login đúng/sai | PASS | sai pass 401 INVALID_CREDENTIALS; đúng 200 đủ accessToken + refreshToken + user | Không lộ password_hash |
+| Không token -> 401, hết hạn -> 401 | PASS | me không token 401, token giả 401 | Hết hạn cùng đường 401 (ValidateLifetime, access 15p) |
+| Customer GET /users -> 403 | PASS | customer1 gọi = 403 | Default Deny + Roles=Admin |
+| Tự khóa -> 400 SELF_ACTION_DENIED | PASS | lock + role chính id=1 đều 400 SELF_ACTION_DENIED | — |
+| Reuse refresh cũ -> 401 | PASS | dùng lại R1 sau xoay = 401, R2 cũng 401 (revoke cả chuỗi) | Chống replay |
+| Logout rồi refresh -> 401 | PASS | logout 200 rồi refresh = 401 INVALID_REFRESH | Thu hồi đúng |
+| Audit có log lock/unlock | PASS | GET /audit-logs User/3 có row User.Lock Active->Locked | Unlock cũng audit |
 
-**Ghi chú:** ...
+**Ghi chú:** Lỗi fix khi làm: Swagger security API của Microsoft.OpenApi 2.7 + Swashbuckle 10 đổi kiểu (dùng OpenApiSecuritySchemeReference + Func). Chưa push git. FE đấu được login/me từ giờ.
 
 ---
 

@@ -17,32 +17,33 @@
 | GET /health -> `{ status, db, time }` | Public | Hoàn thành | curl 200 `db:up` sau B1 (skeleton là `not-configured`) |
 | GET /swagger (Swagger UI + JSON) | Public | Hoàn thành | `/swagger/index.html` 200 |
 
-## 2. Auth — Chưa (B2)
+## 2. Auth — Hoàn thành (B2, 2026-09-07)
 
 Chốt V1: refresh/logout nhận `{ refreshToken }` trong body, FE lưu token ở localStorage
 (cookie HttpOnly để V2). Access dùng header `Authorization: Bearer <accessToken>`.
+Login trả thêm `user` (tiện cho FE, không phá contract).
 
 | Endpoint | Quyền | Request | Response | Lỗi | Trạng thái |
 |---|---|---|---|---|---|
-| POST /api/auth/register | Public | `{ username, email, password }` | 201 UserDto (role=Customer) | 409 trùng user | Chưa |
-| POST /api/auth/login | Public | `{ usernameOrEmail, password }` | 200 `{ accessToken (15p), refreshToken (7d) }` | 401 sai pass | Chưa |
-| POST /api/auth/refresh | Public | `{ refreshToken }` | 200 cặp token mới, revoke cũ | 401 token cũ đã xoay | Chưa |
-| POST /api/auth/logout | Public | `{ refreshToken }` | 200, revoke token | — | Chưa |
-| GET /api/auth/me | Đăng nhập | — | 200 UserDto `{ id, username, email, role }` | 401 không/hết token | Chưa |
+| POST /api/auth/register | Public | `{ username, email, password }` | 201 UserDto (role=Customer) | 409 trùng user | Hoàn thành |
+| POST /api/auth/login | Public | `{ usernameOrEmail, password }` | 200 `{ accessToken (15p), refreshToken (7d), user }` | 401 sai pass | Hoàn thành |
+| POST /api/auth/refresh | Public | `{ refreshToken }` | 200 cặp token mới, revoke cũ | 401 token cũ đã xoay | Hoàn thành |
+| POST /api/auth/logout | Public | `{ refreshToken }` | 200, revoke token | — | Hoàn thành |
+| GET /api/auth/me | Đăng nhập | — | 200 UserDto `{ id, username, email, role }` | 401 không/hết token | Hoàn thành |
 
-## 3. Users — Chưa (B2, Admin)
+## 3. Users — Hoàn thành (B2, Admin, 2026-09-07)
 
 | Endpoint | Request | Response | Lỗi | Trạng thái |
 |---|---|---|---|---|
-| GET /api/users?page&pageSize&search | search theo username/email | 200 PagedResult UserDto | 403 sai role | Chưa |
-| PUT /api/users/{id}/role | `{ role: Admin\|Customer }` | 200 UserDto + audit | 400 tự hạ quyền mình, 403 | Chưa |
-| PUT /api/users/{id}/lock | `{ locked: true\|false }` | 200 UserDto + audit | 400 tự khóa mình, 403 | Chưa |
+| GET /api/users?page&pageSize&search | search theo username/email | 200 PagedResult UserDto | 403 sai role | Hoàn thành |
+| PUT /api/users/{id}/role | `{ role: Admin\|Customer }` | 200 UserDto + audit | 400 tự hạ quyền mình, 403 | Hoàn thành |
+| PUT /api/users/{id}/lock | `{ locked: true\|false }` | 200 UserDto + audit | 400 tự khóa mình, 403 | Hoàn thành |
 
-## 4. Audit — Chưa (B2, Admin)
+## 4. Audit — Hoàn thành (B2, Admin, 2026-09-07)
 
 | Endpoint | Request | Response | Trạng thái |
 |---|---|---|---|
-| GET /api/audit-logs?entityType&entityId&page&pageSize | filter theo đối tượng | 200 PagedResult AuditLog | Chưa |
+| GET /api/audit-logs?entityType&entityId&page&pageSize | filter theo đối tượng | 200 PagedResult AuditLog | Hoàn thành |
 
 ## 5. Destinations — Chưa (B3)
 
@@ -93,9 +94,9 @@ Chốt V1: refresh/logout nhận `{ refreshToken }` trong body, FE lưu token �
 
 ## Tổng hợp tiến độ (2026-09-07)
 
-- Hoàn thành: 2/2 Health (B0+B1).
+- Hoàn thành: Health (B0+B1), Auth + Users + Audit (B2).
 - Tạm (placeholder): 1 (GET /api/tours).
-- Chưa: toàn bộ Auth, Users, Audit, Destinations, Tours thật, Prices, Images, Bookings, Checkouts (làm ở B2-B4).
+- Chưa: Destinations, Tours thật, Prices, Images (B3), Bookings, Checkouts (B4).
 
 ---
 

@@ -23,6 +23,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=${MYSQL_DATABASE:-travela};User=${MYSQL_USER:-travela};Password=${MYSQL_PASSWORD:-travela_password}"
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me-min-32-chars!!}
     depends_on:
       - mysql
     ports:

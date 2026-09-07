@@ -1,6 +1,14 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using Travela.Api.Data;
+using Travela.Api.Helpers;
 using Travela.Api.Middleware;
+using Travela.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,9 +18,55 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<TravelaDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-builder.Services.AddControllers();
+// B2: Services.
+builder.Services.AddSingleton<JwtHelper>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<AuditLogService>();
+
+// B2: JWT access. Secret từ JWT_SECRET env (xem docker-compose), fallback dev trong code.
+var jwtSecret = builder.Configuration["JWT_SECRET"]
+    ?? builder.Configuration["Jwt:Secret"]
+    ?? "dev-only-secret-change-me-min-32-chars!!";
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+builder.Services.AddAuthorization();
+
+// B2: Default Deny — mọi controller yêu cầu đăng nhập trừ khi gắn [AllowAnonymous].
+builder.Services.AddControllers(options =>
+{
+    var policy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser().Build();
+    options.Filters.Add(new AuthorizeFilter(policy));
+});
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Nhập access token: Bearer {token}",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+    c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        { new OpenApiSecuritySchemeReference("Bearer", document, null!), [] }
+    });
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
@@ -38,6 +92,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseCors("Frontend");
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Không UseHttpsRedirection trong container (chỉ có HTTP 8080).
 app.MapControllers();

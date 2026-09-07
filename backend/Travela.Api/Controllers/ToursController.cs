@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Travela.Api.Controllers;
@@ -8,6 +9,7 @@ namespace Travela.Api.Controllers;
 public class ToursController : ControllerBase
 {
     [HttpGet]
+    [AllowAnonymous]
     public IActionResult Get([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
     {
         return Ok(new
