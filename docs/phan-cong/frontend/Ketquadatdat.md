@@ -4,9 +4,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện FE: ...
-* Nhánh/commit: ...
-* Ngày cập nhật: ...
+* Người thực hiện FE: agent (skeleton)
+* Nhánh/commit: main, chưa commit/push (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-06 (F0 skeleton)
 
 ---
 
@@ -16,18 +16,24 @@
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| `src/types/*` | Copy từ DTO BE | User/Tour/Booking/... | ☐/☑ |
-| `services/api.ts` | BaseURL /api | | ☐/☑ |
+| `frontend/travela-web/` (Vite + React 19 + TS + Router + Axios) | Tạo (template vanilla bị sai nên dựng React thủ công) | main.tsx/App.tsx + vite.config.ts proxy /api | ☑ |
+| `src/types/index.ts` | Tạo | PagedResult/User/Destination/Tour/Booking/Checkout camelCase khớp DTO | ☑ |
+| `src/services/api.ts, tourApi.ts, authApi.ts` | Tạo | baseURL /api + interceptor Bearer; tourApi fallback mock rỗng | ☑ |
+| `src/routes/guards.tsx`, `src/lib/auth-store.ts` | Tạo | ProtectedRoute/RoleGuard skeleton (mock token localStorage) | ☑ |
+| `src/components/layout/layouts.tsx`, `src/components/common/common.tsx` | Tạo | AppLayout/AdminLayout + Loading/Empty/Error/PageHeader | ☑ |
+| `src/pages/pages.tsx, Login.tsx` | Tạo | Home/Tours/MyBookings/Admin/403/404 + Login mock | ☑ |
+| `docker/frontend/Dockerfile + nginx.conf` | Tạo | node build -> nginx; proxy /api và /health sang backend:8080 | ☑ |
+| `docs/design-system.md` | Tạo | Token màu/font/radius/spacing (F1 làm full shadcn) | ☑ |
 
 ### Kết quả test
 
 | Checklist F0 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| dev + build sạch TS | | | |
-| Gọi /api được (mock/thật) | | | |
-| Types khớp BE | | | |
+| dev + build sạch TS | PASS | `npm run build`: `tsc && vite build`, 88 modules, 0 lỗi | Chưa chạy `npm run dev` nền vì đã verify qua build + Nginx |
+| Gọi /api được (mock/thật) | PASS | `localhost:3001/api/tours` 200 qua Nginx; FE HTML 200 | Khi BE chưa có data thì tourApi fallback mock rỗng |
+| Types khớp BE | PASS | Types từ DTO contract, build tsc không lỗi `any` | Đổi field phải sync 2 bên |
 
-**Ghi chú:** ...
+**Ghi chú:** shadcn/ui full để dành F1. FE Docker mở ở host 3001 (3000 bị chiếm).
 
 ---
 

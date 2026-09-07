@@ -1,0 +1,20 @@
+/* Design tokens skeleton. Chi tiet day du o docs/design-system.md (F1). */
+:root {
+  --primary: #2563eb;
+  --bg: #f8fafc;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: var(--primary);
+  margin-right: 12px;
+}
