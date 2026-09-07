@@ -76,26 +76,27 @@ Login trả thêm `user` (tiện cho FE, không phá contract).
 | POST /api/tours/{id}/images `{ imageUrl, caption, sortOrder }` | URL max 500 ký tự, tối đa 10 ảnh/tour | 422 URL sai, 400 quá 10 | Hoàn thành |
 | DELETE /api/images/{id} | — | — | Hoàn thành |
 
-## 9. Bookings + Tracking — Chưa (B4)
+## 9. Bookings + Tracking — Hoàn thành (B4, 2026-09-07)
 
 | Endpoint | Quyền | Ghi chú | Lỗi | Trạng thái |
 |---|---|---|---|---|
-| POST /api/bookings `{ tourId, quantity, paymentMethod }` | Customer | 1 transaction tạo Booking + Checkout, amount server tính | 409 hết chỗ, 400 tour Hidden/Draft | Chưa |
-| GET /api/bookings (filter status, page) | Admin all / Customer own | — | 403 xem ké | Chưa |
-| GET /api/bookings/{id} | Own hoặc Admin | Kèm tracking_trace | 403 | Chưa |
-| PUT /api/bookings/{id}/status `{ status, note }` | Admin (Customer chỉ cancel own) | Đúng state machine, mỗi lần đổi ghi trace + audit | 400 sai thứ tự | Chưa |
-| PUT /api/bookings/{id}/cancel | Customer own | Chưa Completed/Cancelled | 400/403 | Chưa |
+| POST /api/bookings `{ tourId, quantity, paymentMethod }` | Đăng nhập | 1 transaction Serializable + retry deadlock; amount server tính; mock trả Paid ngay | 409 hết chỗ, 400 tour Hidden/Draft | Hoàn thành |
+| GET /api/bookings (filter status, page) | Admin all / Customer own | — | 403 xem ké | Hoàn thành |
+| GET /api/bookings/{id} | Own hoặc Admin | Kèm tracking_trace | 403 | Hoàn thành |
+| PUT /api/bookings/{id}/status `{ status, note }` | Admin (Customer chỉ cancel own) | Đúng state machine, sai thứ tự 400 trước check quyền; mỗi lần đổi ghi trace + audit | 400 sai thứ tự | Hoàn thành |
+| PUT /api/bookings/{id}/cancel | Customer own | Chưa Completed/Cancelled | 400/403 | Hoàn thành |
 
-## 10. Checkouts — Chưa (B4)
+## 10. Checkouts — Hoàn thành (B4, 2026-09-07)
 
 | Endpoint | Quyền | Ghi chú | Trạng thái |
 |---|---|---|---|
-| GET /api/checkouts/{id} | Own hoặc Admin | Chỉ tra cứu, không tạo lẻ | Chưa |
+| GET /api/checkouts/{id} | Own hoặc Admin | Chỉ tra cứu, không tạo lẻ | Hoàn thành |
 
 ## Tổng hợp tiến độ (2026-09-07)
 
-- Hoàn thành: Health (B0+B1), Auth + Users + Audit (B2), Destinations + Tours + Prices + Images (B3).
-- Chưa: Bookings, Checkouts (B4).
+- Hoàn thành: Health (B0+B1), Auth + Users + Audit (B2), Destinations + Tours + Prices + Images (B3),
+  Bookings + Checkouts + Tracking (B4).
+- Còn lại: B5 cứng hóa + NFR + rehearsal Docker.
 
 ---
 

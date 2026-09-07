@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) + agent (B2 Auth) | BE2: agent (B3 Tours)
-* Commit/nhánh: main, chưa commit/push B3 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (B3 xong)
+* Người thực hiện BE1: agent (B0 kiểm tra) + agent (skeleton backend/docker) + agent (B1 DB) + agent (B2 Auth) | BE2: agent (B3 Tours) + agent (B4 Booking)
+* Commit/nhánh: main, chưa commit/push B4 (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (B4 xong)
 
 ---
 
@@ -136,21 +136,25 @@
 
 | File | Hành động | Nội dung chính | Người | Trạng thái |
 |---|---|---|---|---|
-| `Controllers/BookingsController, CheckoutsController` | | | | ☐/☑ |
-| `Services/BookingService, CheckoutService` | | transaction + state machine | | ☐/☑ |
+| `Controllers/BookingsController, CheckoutsController` | Tạo | POST/list/detail/status/cancel; checkout chỉ tra cứu own/Admin | agent (BE2) | ☑ |
+| `Services/BookingService, CheckoutService` | Tạo | Transaction Serializable + retry deadlock, trừ chỗ, state machine, amount server tính | agent (BE2) | ☑ |
+| `DTOs/Booking/BookingDtos.cs` | Tạo | Create/Status/Tracking/Checkout DTO khớp Types FE | agent (BE2) | ☑ |
+| `Middleware/ExceptionMiddleware.cs` | Sửa | Log unhandled error (nhờ đó bắt được 2 bug B4) | agent (BE2) | ☑ |
+| `Program.cs`, `Travela.Api.csproj` | Sửa | Đăng ký 2 services; thêm MySqlConnector 2.4.0 | agent (BE2) | ☑ |
 
 ### Kết quả test
 
 | Checklist B4 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Hết chỗ -> 409, không rác DB | | | |
-| Đặt OK -> 201 booking+checkout Paid | | bookingId=..., checkoutId=... | |
-| Tour Hidden không đặt được | | | |
-| Sai thứ tự status -> 400 | | | |
-| Cancel own / sai own | | | |
-| Audit Booking.Status | | | |
+| Hết chỗ -> 409, không rác DB | PASS | tour 2 chỗ đặt 2 rồi đặt thêm = 409 NOT_ENOUGH_SEATS, số booking không tăng | Transaction rollback |
+| Đặt OK -> 201 booking+checkout Paid | PASS | 201 Paid/Paid, amount=priceFrom×qty (200000), trace 2 mốc | Mock payment V1 |
+| Tour Hidden không đặt được | PASS | tour Draft = 400 TOUR_NOT_AVAILABLE | Hidden tương tự |
+| Sai thứ tự status -> 400 | PASS | customer Paid->Completed = 400 INVALID_STATUS_TRANSITION; Cancelled terminal cũng 400 | Validate trước check quyền |
+| Cancel own / sai own | PASS | C2 sửa/hủy đơn C1 = 403; C1 hủy own = 200 Cancelled | — |
+| Audit Booking.Status | PASS | audit-logs Booking có Create + Status (Confirm/Cancel) | Mọi chuyển ghi trace+audit |
+| Concurrent 2 booking | PASS | 3 request song song vào 2 chỗ = [201,201,409], tổng đúng 2, không 500 | Retry deadlock 1213/1205 |
 
-**Ghi chú:** ...
+**Ghi chú:** 2 bug thật đã fix: (1) string[].Contains trong LINQ crash runtime .NET 10 -> so sánh trực tiếp; (2) deadlock concurrent -> retry tối đa 3 lần (EF bọc DbUpdate trong InvalidOperation nên phải bóc inner). DB đã dọn về seed 12/30/30/5/5. Chưa push git. FE đấu được Booking/Checkout thật.
 
 ---
 
