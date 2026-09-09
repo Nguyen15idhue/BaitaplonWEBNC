@@ -1,10 +1,8 @@
-import { useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Mail, Lock } from "lucide-react";
-import { useAuth } from "../lib/auth-context";
-import { useToast, toastForApiError } from "../components/ui/toast";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Mail } from "lucide-react";
+import { useToast } from "../components/ui/toast";
 import { Button } from "../components/ui/button";
-import { PasswordInput, FieldError } from "../components/ui/fields";
 
 function AuthBanner() {
   return (
@@ -22,33 +20,24 @@ function AuthBanner() {
   );
 }
 
-export function Login() {
-  const [usernameOrEmail, setUsernameOrEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fieldError, setFieldError] = useState("");
+export function ForgotPassword() {
+  const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const accountRef = useRef<HTMLInputElement>(null);
-  const { login } = useAuth();
   const { push } = useToast();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!usernameOrEmail.trim() || !password) {
-      setFieldError("Vui lòng nhập đầy đủ email và mật khẩu.");
-      accountRef.current?.focus();
+    if (!email.trim()) {
+      push("Vui lòng nhập địa chỉ email.", "error");
       return;
     }
-    setFieldError("");
     setSubmitting(true);
     try {
-      await login(usernameOrEmail.trim(), password);
-      push("Đăng nhập thành công.", "success");
-      navigate(from, { replace: true });
-    } catch (err) {
-      toastForApiError(push, err);
+      // BE chưa có endpoint forgot password — giả lập thành công
+      await new Promise((r) => setTimeout(r, 1000));
+      push("Đã gửi mật khẩu mới tới email của bạn.", "success");
+    } catch {
+      push("Không gửi được email, thử lại sau.", "error");
     } finally {
       setSubmitting(false);
     }
@@ -60,54 +49,35 @@ export function Login() {
 
       <div className="mx-auto max-w-lg px-4 py-10">
         <div className="rounded-[12px] border border-[#e0dbd0] bg-white p-8 shadow-sm">
-          <h2 className="mb-6 text-center text-2xl font-bold text-[#535041]">Đăng nhập</h2>
+          <h2 className="mb-2 text-center text-2xl font-bold text-[#535041]">Quên mật khẩu</h2>
+          <p className="mb-6 text-center text-sm text-[#8a8576]">
+            Chúng tôi sẽ gửi mật khẩu mới tới email của bạn
+          </p>
 
           <form onSubmit={submit} className="flex flex-col gap-4">
-            {/* Email */}
-            <div>
-              <div className="relative">
-                <input
-                  ref={accountRef}
-                  type="text"
-                  placeholder="Địa chỉ email"
-                  value={usernameOrEmail}
-                  onChange={(e) => setUsernameOrEmail(e.target.value)}
-                  className="w-full rounded-full border border-[#e0dbd0] bg-white px-4 py-3 pr-12 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
-                />
-                <Mail size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8a8576]" />
-              </div>
+            <div className="relative">
+              <input
+                type="email"
+                placeholder="Địa chỉ email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-full border border-[#e0dbd0] bg-white px-4 py-3 pr-12 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
+              />
+              <Mail size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8a8576]" />
             </div>
 
-            {/* Password */}
-            <div>
-              <div className="relative">
-                <PasswordInput
-                  placeholder="Mật khẩu"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="rounded-full pr-12"
-                />
-                <Lock size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8a8576]" />
-              </div>
-            </div>
-
-            {/* Quên mật khẩu */}
-            <div className="text-right">
-              <Link to="/forgot-password" className="text-sm text-[#8a8576] hover:text-[#535041]">
-                Quên mật khẩu
-              </Link>
-            </div>
-
-            <FieldError message={fieldError} />
-
-            {/* Nút đăng nhập */}
             <Button type="submit" loading={submitting} className="w-full rounded-full py-3">
-              Đăng nhập
+              Gửi
             </Button>
           </form>
 
-          {/* Đăng ký */}
           <p className="mt-4 text-center text-sm text-[#535041]">
+            Bạn đã có tài khoản ?{" "}
+            <Link to="/login" className="font-medium text-[#A79F84] hover:underline">
+              Đăng nhập
+            </Link>
+          </p>
+          <p className="mt-1 text-center text-sm text-[#535041]">
             Bạn chưa có tài khoản ?{" "}
             <Link to="/register" className="font-medium text-[#A79F84] hover:underline">
               Đăng ký

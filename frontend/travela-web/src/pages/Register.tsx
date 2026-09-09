@@ -1,48 +1,71 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { useToast, toastForApiError } from "../components/ui/toast";
 import { Button } from "../components/ui/button";
-import { Field, Input, PasswordInput, FieldError } from "../components/ui/fields";
-import { Card } from "../components/ui/card";
-import { PageHeader } from "../components/common/common";
+import { PasswordInput, Checkbox, FieldError } from "../components/ui/fields";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function AuthBanner() {
+  return (
+    <div className="bg-[#535041] px-6 py-6">
+      <div className="mx-auto max-w-2xl">
+        <h1 className="mb-1 text-2xl font-bold italic text-white">Travela</h1>
+        <p className="text-sm text-white/90">
+          Đăng nhập tài khoản và khám phá niềm vui của bạn ở bất cứ đâu
+        </p>
+        <p className="mt-1 text-xs uppercase tracking-widest text-white/70">
+          Nhanh chóng - Tiện lợi - An toàn
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function Register() {
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneCode, setPhoneCode] = useState("+84");
+  const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [fieldError, setFieldError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const usernameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
   const { register } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!username.trim() || !email.trim() || !password) {
-      setFieldError("Vui lòng nhập đầy đủ tên đăng nhập, email và mật khẩu.");
-      usernameRef.current?.focus();
+    if (!email.trim() || !firstName.trim() || !lastName.trim() || !password) {
+      setFieldError("Vui lòng nhập đầy đủ thông tin bắt buộc.");
       return;
     }
     if (!EMAIL_RE.test(email.trim())) {
-      setFieldError("Email chưa đúng định dạng (VD: ban@vidu.com).");
-      emailRef.current?.focus();
+      setFieldError("Email chưa đúng định dạng.");
       return;
     }
-    if (password.length < 6) {
-      setFieldError("Mật khẩu tối thiểu 6 ký tự.");
-      passwordRef.current?.focus();
+    if (password.length < 8) {
+      setFieldError("Mật khẩu tối thiểu 8 ký tự.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setFieldError("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+    if (!agreeTerms) {
+      setFieldError("Vui lòng đồng ý với điều khoản.");
       return;
     }
     setFieldError("");
     setSubmitting(true);
     try {
-      await register(username.trim(), email.trim(), password);
+      // Backend hiện tại chỉ nhận username, email, password
+      await register(firstName.trim() + " " + lastName.trim(), email.trim(), password);
       push("Đăng ký thành công.", "success");
       navigate("/", { replace: true });
     } catch (err) {
@@ -53,26 +76,165 @@ export function Register() {
   }
 
   return (
-    <Card className="mx-auto max-w-md">
-      <PageHeader title="Đăng ký" />
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <Field label="Tên đăng nhập">
-          <Input ref={usernameRef} placeholder="VD: traveller01" value={username} onChange={(e) => setUsername(e.target.value)} />
-        </Field>
-        <Field label="Email">
-          <Input ref={emailRef} placeholder="VD: ban@vidu.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </Field>
-        <Field label="Mật khẩu">
-          <PasswordInput ref={passwordRef} placeholder="Tối thiểu 6 ký tự" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </Field>
-        <FieldError message={fieldError} />
-        <Button type="submit" loading={submitting}>
-          Đăng ký
-        </Button>
-      </form>
-      <p className="mt-3 text-sm text-[#64748B]">
-        Đã có tài khoản? <Link to="/login" className="text-[#2563EB]">Đăng nhập</Link>
-      </p>
-    </Card>
+    <div className="min-h-screen bg-[#fffaf2]">
+      <AuthBanner />
+
+      <div className="mx-auto max-w-lg px-4 py-10">
+        <div className="rounded-[12px] border border-[#e0dbd0] bg-white p-8 shadow-sm">
+          <h2 className="mb-6 text-center text-2xl font-bold text-[#535041]">Đăng ký thành viên</h2>
+
+          <form onSubmit={submit} className="flex flex-col gap-4">
+            {/* Địa chỉ email */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[#535041]">Địa chỉ email</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  placeholder="longphappy@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-full border border-[#e0dbd0] bg-white px-4 py-3 pr-12 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
+                />
+                <Mail size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8a8576]" />
+              </div>
+            </div>
+
+            {/* Số điện thoại */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[#535041]">Số điện thoại</label>
+              <div className="flex gap-2">
+                <div className="flex items-center gap-1 rounded-full border border-[#e0dbd0] bg-white px-3 py-3">
+                  <span className="text-lg">🇻🇳</span>
+                  <select
+                    value={phoneCode}
+                    onChange={(e) => setPhoneCode(e.target.value)}
+                    className="bg-transparent text-sm text-[#535041] focus:outline-none"
+                  >
+                    <option value="+84">+84</option>
+                    <option value="+1">+1</option>
+                    <option value="+82">+82</option>
+                  </select>
+                </div>
+                <input
+                  type="tel"
+                  placeholder="Số điện thoại"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="flex-1 rounded-full border border-[#e0dbd0] bg-white px-4 py-3 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
+                />
+              </div>
+            </div>
+
+            {/* Tên */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[#535041]">Tên</label>
+              <input
+                placeholder="Pháp"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full rounded-full border border-[#e0dbd0] bg-white px-4 py-3 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
+              />
+            </div>
+
+            {/* Họ đệm */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[#535041]">Họ đệm</label>
+              <input
+                placeholder="Huỳnh Long"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full rounded-full border border-[#e0dbd0] bg-white px-4 py-3 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
+              />
+            </div>
+
+            {/* Mật khẩu */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[#535041]">
+                Mật khẩu <span className="font-normal text-[#8a8576]">(Tối thiểu 8 ký tự)</span>
+              </label>
+              <div className="relative">
+                <PasswordInput
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="rounded-full pr-12"
+                />
+                <Lock size={18} className="absolute right-10 top-1/2 -translate-y-1/2 text-[#8a8576]" />
+              </div>
+            </div>
+
+            {/* Xác nhận mật khẩu */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[#535041]">Xác nhận mật khẩu</label>
+              <div className="relative">
+                <PasswordInput
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="rounded-full pr-12"
+                />
+                <Lock size={18} className="absolute right-10 top-1/2 -translate-y-1/2 text-[#8a8576]" />
+              </div>
+            </div>
+
+            <FieldError message={fieldError} />
+
+            {/* Nút đăng ký */}
+            <Button type="submit" loading={submitting} className="w-full rounded-full py-3">
+              Đăng ký
+            </Button>
+          </form>
+
+          {/* Link đăng nhập */}
+          <p className="mt-4 text-center text-sm text-[#535041]">
+            Bạn đã có tài khoản ?{" "}
+            <Link to="/login" className="font-medium text-[#A79F84] hover:underline">
+              Nhấn vào đây
+            </Link>
+          </p>
+
+          {/* Checkbox điều khoản */}
+          <label className="mt-3 flex items-center gap-2 text-sm text-[#535041]">
+            <Checkbox checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} />
+            <span>
+              Tôi đồng ý với{" "}
+              <span className="font-medium text-[#A79F84]">Bảo mật</span> và{" "}
+              <span className="font-medium text-[#A79F84]">Điều khoản hoạt động</span> của trang.
+            </span>
+          </label>
+
+          {/* Divider */}
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-[#e0dbd0]" />
+            <div className="h-px flex-1 bg-[#e0dbd0]" />
+          </div>
+
+          {/* Social login */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[#e0dbd0] bg-white px-4 py-2.5 text-sm text-[#535041] transition-colors hover:bg-[#fffaf2]"
+            >
+              Đăng nhập với Facebook
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-[#e0dbd0] bg-white px-4 py-2.5 text-sm text-[#535041] transition-colors hover:bg-[#fffaf2]"
+            >
+              Đăng nhập với Google
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
