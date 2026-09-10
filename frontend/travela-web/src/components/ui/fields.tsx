@@ -16,7 +16,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 }
 
 export function Input({ ref, ...rest }: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
-  return <input ref={ref} className={cn(field, rest.className)} {...rest} />;
+  return <input ref={ref} {...rest} className={cn(field, rest.className)} />;
 }
 
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -35,7 +35,7 @@ export function PasswordInput({ ref, ...rest }: InputHTMLAttributes<HTMLInputEle
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
-      <input ref={ref} className={cn(field, "pr-10", rest.className)} {...rest} type={show ? "text" : "password"} />
+      <input ref={ref} {...rest} className={cn(field, "pr-10", rest.className)} type={show ? "text" : "password"} />
       <button
         type="button"
         aria-label={show ? "Ẩn mật khẩu" : "Hiện mật khẩu"}

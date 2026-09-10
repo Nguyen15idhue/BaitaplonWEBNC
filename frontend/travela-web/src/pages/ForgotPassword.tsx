@@ -6,13 +6,10 @@ import { Button } from "../components/ui/button";
 
 function AuthBanner() {
   return (
-    <div className="bg-[#535041] px-6 py-6">
+    <div className="bg-[#A79F84] px-6 py-3">
       <div className="mx-auto max-w-2xl">
-        <h1 className="mb-1 text-2xl font-bold italic text-white">Travela</h1>
-        <p className="text-sm text-white/90">
-          Đăng nhập tài khoản và khám phá niềm vui của bạn ở bất cứ đâu
-        </p>
-        <p className="mt-1 text-xs uppercase tracking-widest text-white/70">
+        <h1 className="mb-1 text-lg font-bold italic text-white">Travela</h1>
+        <p className="text-sm font-bold uppercase tracking-widest text-[#535041]">
           Nhanh chóng - Tiện lợi - An toàn
         </p>
       </div>

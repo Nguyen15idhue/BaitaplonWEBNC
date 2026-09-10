@@ -18,6 +18,7 @@ import { AdminTours } from "./pages/admin/Tours";
 import { AdminDestinations } from "./pages/admin/Destinations";
 import { AdminBookings } from "./pages/admin/Bookings";
 import { AuditLogs } from "./pages/admin/AuditLogs";
+import { AdminSettings } from "./pages/admin/Settings";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ForgotPassword } from "./pages/ForgotPassword";
@@ -90,6 +91,7 @@ export default function App() {
               <Route path="/admin/destinations" element={<AdminDestinations />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

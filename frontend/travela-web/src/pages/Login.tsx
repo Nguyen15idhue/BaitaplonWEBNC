@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Mail, Lock } from "lucide-react";
+import { Mail } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { useToast, toastForApiError } from "../components/ui/toast";
 import { Button } from "../components/ui/button";
@@ -8,13 +8,10 @@ import { PasswordInput, FieldError } from "../components/ui/fields";
 
 function AuthBanner() {
   return (
-    <div className="bg-[#535041] px-6 py-6">
+    <div className="bg-[#A79F84] px-6 py-3">
       <div className="mx-auto max-w-2xl">
-        <h1 className="mb-1 text-2xl font-bold italic text-white">Travela</h1>
-        <p className="text-sm text-white/90">
-          Đăng nhập tài khoản và khám phá niềm vui của bạn ở bất cứ đâu
-        </p>
-        <p className="mt-1 text-xs uppercase tracking-widest text-white/70">
+        <h1 className="mb-1 text-lg font-bold italic text-white">Travela</h1>
+        <p className="text-sm font-bold uppercase tracking-widest text-[#535041]">
           Nhanh chóng - Tiện lợi - An toàn
         </p>
       </div>
@@ -44,9 +41,10 @@ export function Login() {
     setFieldError("");
     setSubmitting(true);
     try {
-      await login(usernameOrEmail.trim(), password);
+      const u = await login(usernameOrEmail.trim(), password);
       push("Đăng nhập thành công.", "success");
-      navigate(from, { replace: true });
+      const target = from.startsWith("/admin") && u.role !== "Admin" ? "/" : from;
+      navigate(target, { replace: true });
     } catch (err) {
       toastForApiError(push, err);
     } finally {
@@ -80,15 +78,12 @@ export function Login() {
 
             {/* Password */}
             <div>
-              <div className="relative">
-                <PasswordInput
-                  placeholder="Mật khẩu"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="rounded-full pr-12"
-                />
-                <Lock size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8a8576]" />
-              </div>
+              <PasswordInput
+                placeholder="Mật khẩu"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="rounded-full px-4 py-3"
+              />
             </div>
 
             {/* Quên mật khẩu */}
