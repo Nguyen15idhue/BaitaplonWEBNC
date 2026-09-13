@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { getUser, clearSession } from "./auth-store";
+import { getAccessToken, getRefreshToken, clearSession } from "./auth-store";
 import { login as apiLogin, logout as apiLogout, me as apiMe, register as apiRegister } from "../services/authApi";
 import type { User } from "../types";
 
@@ -29,20 +29,25 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => getUser());
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Có token local mới gọi /me xác thực lại; không có thì thôi (trang public).
-    if (!getUser()) {
+    // H09: nguồn sự thật là token, không phải cached user.
+    // Có access -> /me; fail + còn refresh -> interceptor tự refresh+retry; hết cả 2 -> public.
+    if (!getAccessToken() && !getRefreshToken()) {
       setLoading(false);
       return;
     }
     apiMe()
       .then(setUser)
-      .catch(() => {
-        clearSession();
-        setUser(null);
+      .catch((err: unknown) => {
+        // Chỉ xóa session khi 401 (token hết), lỗi mạng thì giữ phiên.
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 401) {
+          clearSession();
+          setUser(null);
+        }
       })
       .finally(() => setLoading(false));
   }, []);

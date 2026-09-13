@@ -18,6 +18,8 @@ export function TourDetailPage() {
   const [activeImg, setActiveImg] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setError("");
     getTourDetail(Number(id))
       .then((t) => {
         setTour(t);
@@ -30,7 +32,7 @@ export function TourDetailPage() {
   if (loading) return <Loading />;
   if (error || !tour) return <ErrorState message={error || "Không tìm thấy tour."} />;
 
-  const images = [...tour.images].sort((a, b) => a.sortOrder - b.sortOrder);
+  const images = [...(tour.images ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={tour.tourName} />
@@ -66,6 +68,13 @@ export function TourDetailPage() {
           </div>
           <p className="text-sm text-[#0F172A]">{tour.description}</p>
           <p className="text-sm text-[#64748B]">Số chỗ tối đa: {tour.maxSeats}</p>
+          {(tour.startDate || tour.endDate) && (
+            <p className="text-sm text-[#64748B]">
+              Thời gian: {tour.startDate ? new Date(tour.startDate).toLocaleDateString("vi-VN") : "?"}
+              {" → "}
+              {tour.endDate ? new Date(tour.endDate).toLocaleDateString("vi-VN") : "?"}
+            </p>
+          )}
           <p className="text-lg font-bold text-[#2563EB]">Từ {formatVND(tour.priceFrom)}</p>
           <Link to={`/booking/${tour.id}`}>
             <Button>Đặt ngay</Button>
@@ -74,11 +83,11 @@ export function TourDetailPage() {
       </div>
       <Card>
         <h2 className="mb-2 text-sm font-semibold text-[#0F172A]">Bảng giá theo nguồn</h2>
-        {tour.prices.length === 0 ? (
+        {(tour.prices ?? []).length === 0 ? (
           <EmptyState message="Chưa có giá hiệu lực." />
         ) : (
           <Table headers={["Nguồn", "Giá", "Hiệu lực từ"]}>
-            {tour.prices.map((p) => (
+            {(tour.prices ?? []).map((p) => (
               <tr key={p.id} className="border-b border-[#E2E8F0]">
                 <td className="px-4 py-2">{p.sourceName}</td>
                 <td className="px-4 py-2 font-medium">{formatVND(p.priceValue)}</td>

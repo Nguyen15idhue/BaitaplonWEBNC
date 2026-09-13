@@ -26,6 +26,8 @@ export function BookingPage() {
   );
 
   useEffect(() => {
+    setLoading(true);
+    setError("");
     getTourDetail(Number(tourId))
       .then(setTour)
       .catch(() => setError("Không tìm thấy tour hoặc tour chưa mở bán."))
@@ -66,11 +68,18 @@ export function BookingPage() {
   const qty = Number(quantity);
   const validQty = Number.isInteger(qty) && qty > 0;
   const amount = validQty ? tour.priceFrom * qty : 0;
+  // C06/B1: tour chưa có giá -> Liên hệ, hết chỗ -> khóa nút.
+  const noPrice = tour.priceFrom <= 0;
+  const soldOut = tour.availableSeats <= 0;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!validQty) {
       setFieldError("Số lượng phải là số nguyên lớn hơn 0.");
+      return;
+    }
+    if (qty > current.availableSeats) {
+      setFieldError(`Chỉ còn ${current.availableSeats} chỗ, giảm số lượng.`);
       return;
     }
     setFieldError("");
@@ -94,9 +103,11 @@ export function BookingPage() {
         <Card>
           <h2 className="mb-1 text-sm font-semibold text-[#0F172A]">{tour.tourName}</h2>
           <p className="text-sm text-[#64748B]">
-            {tour.destination?.name} · Giá/người: {formatVND(tour.priceFrom)}
+            {tour.destination?.name} · Giá/người: {noPrice ? "Liên hệ" : formatVND(tour.priceFrom)}
           </p>
-          <p className="text-sm text-[#64748B]">Số chỗ tối đa: {tour.maxSeats}</p>
+          <p className="text-sm text-[#64748B]">
+            Còn {tour.availableSeats}/{tour.maxSeats} chỗ
+          </p>
         </Card>
         <Card>
           <form onSubmit={submit} className="flex flex-col gap-3">
@@ -109,8 +120,13 @@ export function BookingPage() {
               />
             </Field>
             <FieldError message={fieldError} />
+            {noPrice && <FieldError message="Tour chưa có giá bán, vui lòng liên hệ." />}
+            {soldOut && !noPrice && <FieldError message="Tour đã hết chỗ." />}
+            {qty > tour.availableSeats && !noPrice && !soldOut && (
+              <FieldError message={`Chỉ còn ${tour.availableSeats} chỗ.`} />
+            )}
             <p className="text-sm font-bold text-[#0F172A]">Tổng tiền: {formatVND(amount)}</p>
-            <Button type="submit" loading={submitting}>
+            <Button type="submit" loading={submitting} disabled={noPrice || soldOut || qty > tour.availableSeats}>
               Xác nhận đặt
             </Button>
           </form>

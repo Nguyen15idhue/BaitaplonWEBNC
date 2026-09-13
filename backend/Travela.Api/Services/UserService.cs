@@ -26,12 +26,15 @@ public class UserService
         Id = u.Id, Username = u.Username, Email = u.Email, Role = u.Role, Status = u.Status
     };
 
-    public async Task<PagedResult<UserDto>> ListAsync(int page, int pageSize, string? search)
+    public async Task<PagedResult<UserDto>> ListAsync(int page, int pageSize, string? search, string? role = null, string? status = null)
     {
         (page, pageSize) = PaginationHelper.Normalize(page, pageSize);
         var q = _db.Users.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
             q = q.Where(u => u.Username.Contains(search) || u.Email.Contains(search));
+        // D5: filter quản trị theo role/status.
+        if (!string.IsNullOrWhiteSpace(role)) q = q.Where(u => u.Role == role);
+        if (!string.IsNullOrWhiteSpace(status)) q = q.Where(u => u.Status == status);
         var total = await q.CountAsync();
         var items = await q.OrderBy(u => u.Id).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         return PaginationHelper.ToPagedResult(items.Select(ToDto).ToList(), total, page, pageSize);
@@ -48,8 +51,9 @@ public class UserService
             ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy user.");
         var old = user.Role;
         user.Role = role;
+        // Audit cùng 1 SaveChanges với mutation (không audit coi như chưa xong).
+        _audit.Add(actorId, "User.Role", "User", id, old, role);
         await _db.SaveChangesAsync();
-        await _audit.LogAsync(actorId, "User.Role", "User", id, old, role);
         return ToDto(user);
     }
 
@@ -62,17 +66,16 @@ public class UserService
             ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy user.");
         var old = user.Status;
         user.Status = locked ? "Locked" : "Active";
-        await _db.SaveChangesAsync();
-        await _audit.LogAsync(actorId, locked ? "User.Lock" : "User.Unlock", "User", id, old, user.Status);
+        _audit.Add(actorId, locked ? "User.Lock" : "User.Unlock", "User", id, old, user.Status);
 
-        // Thu hồi mọi refresh đang active khi bị khóa.
+        // Thu hồi mọi refresh đang active khi bị khóa — cùng 1 SaveChanges.
         if (locked)
         {
             var actives = await _db.RefreshTokens
                 .Where(r => r.UserId == id && r.RevokedAt == null).ToListAsync();
             foreach (var r in actives) r.RevokedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
         }
+        await _db.SaveChangesAsync();
         return ToDto(user);
     }
 }
