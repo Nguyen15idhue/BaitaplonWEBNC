@@ -15,6 +15,11 @@ public class TourListDto
     public decimal PriceFrom { get; set; }
     public DestinationBriefDto? Destination { get; set; }
     public string Status { get; set; } = string.Empty;
+    public int MaxSeats { get; set; }
+    public int BookedSeats { get; set; }
+    public int AvailableSeats { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 }
 
 public class PriceDto
@@ -36,7 +41,6 @@ public class ImageDto
 public class TourDetailDto : TourListDto
 {
     public string Description { get; set; } = string.Empty;
-    public int MaxSeats { get; set; }
     public int DestinationId { get; set; }
     public List<ImageDto> Images { get; set; } = new();
     public List<PriceDto> Prices { get; set; } = new();
@@ -49,6 +53,8 @@ public class CreateTourRequest
     public int DestinationId { get; set; }
     public int MaxSeats { get; set; }
     public string Status { get; set; } = "Draft";
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 }
 
 public class UpdateTourRequest : CreateTourRequest

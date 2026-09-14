@@ -4,6 +4,8 @@ import type { PagedResult, User } from "../types";
 // User admin thật (B2): search username/email, phân trang, đổi role, khóa/mở.
 export interface UserQuery {
   search?: string;
+  role?: string;
+  status?: string;
   page?: number;
   pageSize?: number;
 }
@@ -14,6 +16,8 @@ export async function listUsers(q: UserQuery = {}): Promise<PagedResult<User>> {
       page: q.page ?? 1,
       pageSize: q.pageSize ?? 12,
       ...(q.search ? { search: q.search } : {}),
+      ...(q.role ? { role: q.role } : {}),
+      ...(q.status ? { status: q.status } : {}),
     },
   });
   return res.data;

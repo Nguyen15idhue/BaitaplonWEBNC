@@ -25,6 +25,18 @@ export async function logout(): Promise<void> {
   clearSession();
 }
 
+// C4: đăng xuất mọi thiết bị.
+export async function logoutAll(): Promise<void> {
+  await api.post("/auth/logout-all");
+  clearSession();
+}
+
+// A6: đổi mật khẩu.
+export async function changePassword(oldPassword: string, newPassword: string): Promise<User> {
+  const res = await api.put<User>("/auth/change-password", { oldPassword, newPassword });
+  return res.data;
+}
+
 export async function me(): Promise<User> {
   const res = await api.get<User>("/auth/me");
   return res.data;

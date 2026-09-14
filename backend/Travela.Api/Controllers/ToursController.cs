@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Travela.Api.DTOs.Tour;
@@ -10,7 +8,7 @@ namespace Travela.Api.Controllers;
 // Tours: đọc public (chỉ Published), ghi Admin. B3 thay thế placeholder B0.
 [ApiController]
 [Route("api/tours")]
-public class ToursController : ControllerBase
+public class ToursController : BaseApiController
 {
     private readonly TourService _tours;
 
@@ -78,13 +76,5 @@ public class ToursController : ControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         return Ok(await _tours.DeleteAsync(id, CurrentUserId()));
-    }
-
-    private int CurrentUserId()
-    {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new Middleware.AppException(System.Net.HttpStatusCode.Unauthorized, "UNAUTHORIZED", "Phiên không hợp lệ.");
-        return int.Parse(sub);
     }
 }

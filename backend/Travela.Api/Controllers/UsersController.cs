@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Travela.Api.DTOs.User;
@@ -11,7 +9,7 @@ namespace Travela.Api.Controllers;
 [ApiController]
 [Route("api/users")]
 [Authorize(Roles = "Admin")]
-public class UsersController : ControllerBase
+public class UsersController : BaseApiController
 {
     private readonly UserService _users;
 
@@ -21,9 +19,12 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = 12, [FromQuery] string? search = null)
+    public async Task<IActionResult> List(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 12,
+        [FromQuery] string? search = null, [FromQuery] string? role = null,
+        [FromQuery] string? status = null)
     {
-        return Ok(await _users.ListAsync(page, pageSize, search));
+        return Ok(await _users.ListAsync(page, pageSize, search, role, status));
     }
 
     [HttpPut("{id:int}/role")]
@@ -36,13 +37,5 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> UpdateLock(int id, [FromBody] UpdateLockRequest req)
     {
         return Ok(await _users.UpdateLockAsync(id, req.Locked, CurrentUserId()));
-    }
-
-    private int CurrentUserId()
-    {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new Middleware.AppException(System.Net.HttpStatusCode.Unauthorized, "UNAUTHORIZED", "Phiên không hợp lệ.");
-        return int.Parse(sub);
     }
 }

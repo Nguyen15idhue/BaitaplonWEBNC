@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   getTourDetail, adminListTours, createTour, updateTour, deleteTour,
-  getTourPrices, createPrice, deletePrice, createImage, deleteImage,
+  getTourPrices, createPrice, updatePrice, deletePrice, createImage, deleteImage,
   type TourForm,
 } from "../../services/tourApi";import { listDestinations } from "../../services/destinationApi";
 import type { Destination, Tour, TourDetail, TourPrice } from "../../types";
@@ -16,7 +16,7 @@ import { useToast, toastForApiError } from "../../components/ui/toast";
 import { formatVND } from "../../lib/format";
 import { label, TOUR_STATUS_LABEL } from "../../lib/labels";
 
-const EMPTY_FORM: TourForm = { tourName: "", description: "", destinationId: 0, maxSeats: 20, status: "Draft" };
+const EMPTY_FORM: TourForm = { tourName: "", description: "", destinationId: 0, maxSeats: 20, status: "Draft", startDate: "", endDate: "" };
 
 export function AdminTours() {
   const { push } = useToast();
@@ -34,6 +34,7 @@ export function AdminTours() {
   const [prices, setPrices] = useState<TourPrice[]>([]);
   const [images, setImages] = useState<TourDetail["images"]>([]);
   const [priceForm, setPriceForm] = useState({ sourceName: "Website", priceValue: "", effectiveDate: "" });
+  const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
   const [imageForm, setImageForm] = useState({ imageUrl: "", caption: "", sortOrder: "1" });
   const [deleting, setDeleting] = useState<Tour | null>(null);
   const [saving, setSaving] = useState(false);
@@ -85,6 +86,8 @@ export function AdminTours() {
         destinationId: d.destinationId,
         maxSeats: d.maxSeats,
         status: d.status,
+        startDate: d.startDate?.slice(0, 10) ?? "",
+        endDate: d.endDate?.slice(0, 10) ?? "",
       });
       setPrices(d.prices);
       setImages(d.images);
@@ -112,14 +115,24 @@ export function AdminTours() {
 
   async function saveTour() {
     if (!validate()) return;
+    if (form.startDate && form.endDate && form.startDate >= form.endDate) {
+      setFieldError("Ngày bắt đầu phải trước ngày kết thúc.");
+      return;
+    }
     setSaving(true);
+    // A4: date-only -> UTC, rỗng -> null (tour không giới hạn ngày).
+    const body: TourForm = {
+      ...form,
+      startDate: form.startDate ? new Date(`${form.startDate}T00:00:00Z`).toISOString() : null,
+      endDate: form.endDate ? new Date(`${form.endDate}T00:00:00Z`).toISOString() : null,
+    };
     try {
       if (editingId === null) {
-        const created = await createTour(form);
+        const created = await createTour(body);
         setEditingId(created.id);
         push("Đã tạo tour.", "success");
       } else {
-        await updateTour(editingId, form);
+        await updateTour(editingId, body);
         push("Đã lưu tour.", "success");
       }
       load(page);
@@ -138,18 +151,40 @@ export function AdminTours() {
       return;
     }
     try {
-      await createPrice(editingId, {
-        sourceName: priceForm.sourceName.trim(),
-        priceValue: value,
-        effectiveDate: new Date(priceForm.effectiveDate).toISOString(),
-      });
-      push("Đã thêm giá.", "success");
+      // H06: date-only -> UTC midnight rõ semantics, tránh lệch múi giờ local.
+      const effectiveDate = new Date(`${priceForm.effectiveDate}T00:00:00Z`).toISOString();
+      if (editingPriceId === null) {
+        await createPrice(editingId, {
+          sourceName: priceForm.sourceName.trim(),
+          priceValue: value,
+          effectiveDate,
+        });
+        push("Đã thêm giá.", "success");
+      } else {
+        // H03: sửa giá qua PUT /prices/{id}.
+        await updatePrice(editingPriceId, {
+          sourceName: priceForm.sourceName.trim(),
+          priceValue: value,
+          effectiveDate,
+        });
+        push("Đã cập nhật giá.", "success");
+        setEditingPriceId(null);
+      }
       setPriceForm({ sourceName: "Website", priceValue: "", effectiveDate: "" });
       setPrices(await getTourPrices(editingId));
       load(page);
     } catch (err) {
       toastForApiError(push, err);
     }
+  }
+
+  function startEditPrice(p: TourPrice) {
+    setEditingPriceId(p.id);
+    setPriceForm({
+      sourceName: p.sourceName,
+      priceValue: String(p.priceValue),
+      effectiveDate: p.effectiveDate.slice(0, 10),
+    });
   }
 
   async function removePrice(id: number) {
@@ -247,7 +282,7 @@ export function AdminTours() {
           <Pagination
             page={page}
             pageSize={pageSize}
-            total={Math.max(total, items.length)}
+            total={total}
             onPage={load}
           />
         </>
@@ -277,6 +312,14 @@ export function AdminTours() {
               <Field label="Số chỗ tối đa">
                 <Input type="number" min={1} placeholder="VD: 30" value={form.maxSeats} onChange={(e) => setForm({ ...form, maxSeats: Number(e.target.value) })} />
               </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Ngày bắt đầu (để trống = không giới hạn)">
+                  <Input type="date" value={form.startDate ?? ""} onChange={(e) => setForm({ ...form, startDate: e.target.value || null })} />
+                </Field>
+                <Field label="Ngày kết thúc">
+                  <Input type="date" value={form.endDate ?? ""} onChange={(e) => setForm({ ...form, endDate: e.target.value || null })} />
+                </Field>
+              </div>
               <Field label="Trạng thái">
                 <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                   <option value="Draft">Nháp (Draft)</option>
@@ -300,6 +343,9 @@ export function AdminTours() {
                     <span className="flex-1">
                       {p.sourceName} · {formatVND(p.priceValue)}
                     </span>
+                    <Button variant="outline" onClick={() => startEditPrice(p)}>
+                      Sửa
+                    </Button>
                     <Button variant="danger" onClick={() => removePrice(p.id)}>
                       Xóa
                     </Button>
@@ -310,7 +356,20 @@ export function AdminTours() {
                   <Input type="number" min={1} placeholder="Giá > 0" value={priceForm.priceValue} onChange={(e) => setPriceForm({ ...priceForm, priceValue: e.target.value })} />
                   <Input type="date" value={priceForm.effectiveDate} onChange={(e) => setPriceForm({ ...priceForm, effectiveDate: e.target.value })} />
                 </div>
-                <Button onClick={addPrice}>Thêm giá</Button>
+                <div className="flex gap-2">
+                  <Button onClick={addPrice}>{editingPriceId === null ? "Thêm giá" : "Lưu giá"}</Button>
+                  {editingPriceId !== null && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingPriceId(null);
+                        setPriceForm({ sourceName: "Website", priceValue: "", effectiveDate: "" });
+                      }}
+                    >
+                      Hủy sửa
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </TabPanel>

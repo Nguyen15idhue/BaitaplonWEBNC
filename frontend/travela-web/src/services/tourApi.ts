@@ -46,6 +46,9 @@ export async function adminListTours(q: TourQuery & { status?: string } = {}): P
       pageSize: q.pageSize ?? 12,
       ...(q.search ? { search: q.search } : {}),
       ...(q.destinationId ? { destinationId: q.destinationId } : {}),
+      ...(q.minPrice !== undefined ? { minPrice: q.minPrice } : {}),
+      ...(q.maxPrice !== undefined ? { maxPrice: q.maxPrice } : {}),
+      ...(q.sort ? { sort: q.sort } : {}),
       ...(q.status ? { status: q.status } : {}),
     },
   });
@@ -64,6 +67,8 @@ export interface TourForm {
   destinationId: number;
   maxSeats: number;
   status: string;
+  startDate: string | null;
+  endDate: string | null;
 }
 
 export async function createTour(body: TourForm): Promise<TourDetail> {
@@ -91,6 +96,15 @@ export async function createPrice(
 
 export async function deletePrice(id: number): Promise<void> {
   await api.delete(`/prices/${id}`);
+}
+
+// H03: BE có PUT /prices/{id} nhưng FE thiếu — bổ sung để admin sửa giá.
+export async function updatePrice(
+  id: number,
+  body: { sourceName: string; priceValue: number; effectiveDate: string },
+): Promise<TourPrice> {
+  const res = await api.put<TourPrice>(`/prices/${id}`, body);
+  return res.data;
 }
 
 export async function createImage(

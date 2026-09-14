@@ -1,17 +1,8 @@
 import { api } from "./api";
-import type { PagedResult } from "../types";
+import type { AuditLog, PagedResult } from "../types";
 
-// Audit thật (B2): tra cứu lịch sử đổi giá/status/role/lock.
-export interface AuditLog {
-  id: number;
-  actorId: number | null;
-  action: string;
-  entityType: string;
-  entityId: number;
-  oldValue: string | null;
-  newValue: string | null;
-  createdAt: string;
-}
+// Audit thật (B2): tra cứu lịch sử đổi giá/status/role/lock. Dùng chung type với BE.
+export type { AuditLog };
 
 export async function listAuditLogs(entityType: string, entityId: number): Promise<AuditLog[]> {
   const res = await api.get<{ items: AuditLog[] }>("/audit-logs", {
@@ -24,6 +15,9 @@ export async function listAuditLogs(entityType: string, entityId: number): Promi
 export interface AuditQuery {
   entityType?: string;
   entityId?: number;
+  action?: string;
+  from?: string;
+  to?: string;
   page?: number;
   pageSize?: number;
 }
@@ -35,6 +29,9 @@ export async function pageAuditLogs(q: AuditQuery = {}): Promise<PagedResult<Aud
       pageSize: q.pageSize ?? 12,
       ...(q.entityType ? { entityType: q.entityType } : {}),
       ...(q.entityId !== undefined ? { entityId: q.entityId } : {}),
+      ...(q.action ? { action: q.action } : {}),
+      ...(q.from ? { from: q.from } : {}),
+      ...(q.to ? { to: q.to } : {}),
     },
   });
   return res.data;

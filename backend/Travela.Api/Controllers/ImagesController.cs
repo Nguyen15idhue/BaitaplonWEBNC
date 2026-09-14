@@ -7,7 +7,7 @@ namespace Travela.Api.Controllers;
 
 // Images: chỉ Admin thêm/xóa (tối đa 10 ảnh/tour, URL http/https).
 [ApiController]
-public class ImagesController : ControllerBase
+public class ImagesController : BaseApiController
 {
     private readonly TourService _tours;
 
@@ -20,14 +20,14 @@ public class ImagesController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create(int tourId, [FromBody] CreateImageRequest req)
     {
-        return StatusCode(201, await _tours.CreateImageAsync(tourId, req));
+        return StatusCode(201, await _tours.CreateImageAsync(tourId, req, CurrentUserId()));
     }
 
     [HttpDelete("api/images/{id:int}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
-        await _tours.DeleteImageAsync(id);
+        await _tours.DeleteImageAsync(id, CurrentUserId());
         return Ok(new { message = "Đã xóa ảnh." });
     }
 }

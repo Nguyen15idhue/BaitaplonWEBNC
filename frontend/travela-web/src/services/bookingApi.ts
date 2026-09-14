@@ -2,8 +2,14 @@ import { api } from "./api";
 import type { Booking, Checkout, PagedResult } from "../types";
 
 // Booking + Checkout thật (B4 xong): customer tạo/xem/hủy own.
+// H08: mỗi lần bấm đặt sinh Idempotency-Key riêng — retry mạng không tạo trùng đơn.
 export async function createBooking(tourId: number, quantity: number): Promise<Booking> {
-  const res = await api.post<Booking>("/bookings", { tourId, quantity, paymentMethod: "Mock" });
+  const key = crypto.randomUUID();
+  const res = await api.post<Booking>(
+    "/bookings",
+    { tourId, quantity, paymentMethod: "Mock" },
+    { headers: { "Idempotency-Key": key } },
+  );
   return res.data;
 }
 
@@ -21,6 +27,12 @@ export async function getBooking(id: number): Promise<Booking> {
 
 export async function cancelBooking(id: number): Promise<Booking> {
   const res = await api.put<Booking>(`/bookings/${id}/cancel`);
+  return res.data;
+}
+
+// A2: thanh toán bổ sung cho đơn PendingPayment kẹt.
+export async function payBooking(id: number): Promise<Booking> {
+  const res = await api.post<Booking>(`/bookings/${id}/pay`);
   return res.data;
 }
 

@@ -24,11 +24,23 @@ export interface Destination {
 export interface Tour {
   id: number;
   tourName: string;
-  description: string;
   priceFrom: number;
   thumbnail: string;
   destination: Destination | null;
   status: string;
+  maxSeats: number;
+  bookedSeats: number;
+  availableSeats: number;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+// H02: list không có description — type riêng, detail mới có.
+export interface TourDetail extends Tour {
+  description: string;
+  destinationId: number;
+  images: TourImage[];
+  prices: TourPrice[];
 }
 
 export interface TrackingStep {
@@ -53,7 +65,7 @@ export interface Booking {
 
 export interface Checkout {
   id: number;
-  bookingId: number;
+  bookingId?: number;
   amount: number;
   status: string;
   paymentMethod?: string;
@@ -75,14 +87,6 @@ export interface TourPrice {
   effectiveDate: string;
 }
 
-export interface TourDetail extends Tour {
-  description: string;
-  maxSeats: number;
-  destinationId: number;
-  images: TourImage[];
-  prices: TourPrice[];
-}
-
 // F1b: khớp DTO Auth BE + lỗi chuẩn { error, message }.
 export interface AuthResponse {
   accessToken: string;
@@ -93,4 +97,27 @@ export interface AuthResponse {
 export interface ApiError {
   error: string;
   message: string;
+}
+
+// C07/A5: khớp AdminStatsDto BE.
+export interface AdminStats {
+  usersTotal: number;
+  toursTotal: number;
+  bookingsTotal: number;
+  revenuePaid: number;
+  bookingsByStatus: Record<string, number>;
+  topTours: { tourId: number; tourName: string; sold: number }[];
+}
+
+// B2: khớp AuditLogDto BE.
+export interface AuditLog {
+  id: number;
+  actorId: number | null;
+  actorUsername: string;
+  action: string;
+  entityType: string;
+  entityId: number;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
 }

@@ -18,6 +18,7 @@ public class TravelaDbContext : DbContext
     public DbSet<Checkout> Checkouts => Set<Checkout>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -53,6 +54,8 @@ public class TravelaDbContext : DbContext
             e.HasIndex(x => x.TourName);
             e.HasIndex(x => x.DestinationId);
             e.HasIndex(x => x.Status);
+            // N09: chống số âm ở DB, không chỉ validation service.
+            e.ToTable(t => t.HasCheckConstraint("CK_tours_max_seats", "MaxSeats > 0"));
         });
 
         b.Entity<Price>(e =>
@@ -64,6 +67,9 @@ public class TravelaDbContext : DbContext
                 .HasForeignKey(x => x.TourId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.TourId);
             e.HasIndex(x => x.EffectiveDate);
+            // H11: composite cho query giá hiệu lực (tour + source + date).
+            e.HasIndex(x => new { x.TourId, x.SourceName, x.EffectiveDate, x.Id });
+            e.ToTable(t => t.HasCheckConstraint("CK_prices_value", "PriceValue > 0"));
         });
 
         b.Entity<Image>(e =>
@@ -74,6 +80,9 @@ public class TravelaDbContext : DbContext
             e.HasOne(x => x.Tour).WithMany(t => t.Images)
                 .HasForeignKey(x => x.TourId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.TourId);
+            // H11: thumbnail query (tour + sort).
+            e.HasIndex(x => new { x.TourId, x.SortOrder, x.Id });
+            e.ToTable(t => t.HasCheckConstraint("CK_images_sort", "SortOrder > 0"));
         });
 
         b.Entity<Booking>(e =>
@@ -88,6 +97,12 @@ public class TravelaDbContext : DbContext
             e.HasIndex(x => x.UserId);
             e.HasIndex(x => x.TourId);
             e.HasIndex(x => x.Status);
+            // H11: capacity check (tour+status) và my-bookings (user+status).
+            e.HasIndex(x => new { x.TourId, x.Status });
+            e.HasIndex(x => new { x.UserId, x.Status });
+            // M12: concurrency token cho state machine booking.
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.ToTable(t => t.HasCheckConstraint("CK_bookings_qty", "Quantity > 0"));
         });
 
         b.Entity<Checkout>(e =>
@@ -99,6 +114,7 @@ public class TravelaDbContext : DbContext
             e.HasOne(x => x.Booking).WithOne(x => x.Checkout)
                 .HasForeignKey<Checkout>(x => x.BookingId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.BookingId).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("CK_checkouts_amount", "Amount >= 0"));
         });
 
         b.Entity<AuditLog>(e =>
@@ -122,6 +138,20 @@ public class TravelaDbContext : DbContext
                 .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.TokenHash).IsUnique();
             e.HasIndex(x => x.UserId);
+            // H11/M06: revoke-chain + cleanup query.
+            e.HasIndex(x => new { x.UserId, x.RevokedAt, x.ExpiresAt });
+        });
+
+        b.Entity<IdempotencyKey>(e =>
+        {
+            e.ToTable("idempotency_keys");
+            e.Property(x => x.Key).HasMaxLength(200).IsRequired();
+            e.HasOne(x => x.User).WithMany()
+                .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Booking).WithMany()
+                .HasForeignKey(x => x.BookingId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.UserId, x.Key }).IsUnique();
+            e.HasIndex(x => x.CreatedAt);
         });
     }
 }

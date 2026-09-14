@@ -40,6 +40,11 @@ export default defineConfig({
         target: process.env.VITE_API_PROXY ?? "http://localhost:5000",
         changeOrigin: true,
       },
+      // H01: FE gọi /health trần (ngoài baseURL /api) nên cần proxy riêng cho local dev.
+      "/health": {
+        target: process.env.VITE_API_PROXY ?? "http://localhost:5000",
+        changeOrigin: true,
+      },
     },
   },
 });
