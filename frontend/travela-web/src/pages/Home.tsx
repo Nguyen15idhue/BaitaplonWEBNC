@@ -77,14 +77,16 @@ export function Home() {
       <ExploreSection />
 
       {!loading && !error && (
-        <section>
-          <h2 className="mb-4 text-xl font-bold text-[#535041]">Tour nổi bật</h2>
+        <section className="py-8">
+          <h2 className="mb-8 text-center text-3xl font-bold text-[#535041] md:text-4xl">
+            Tour nổi bật
+          </h2>
           {tours.length === 0 ? (
             <EmptyState message="Chưa có tour." />
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
               {tours.map((t) => (
-                <TourCard key={t.id} tour={t} />
+                <TourCard key={t.id} tour={t} showDetails />
               ))}
             </div>
           )}

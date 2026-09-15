@@ -3,20 +3,29 @@ import {
   getTourDetail, adminListTours, createTour, updateTour, deleteTour,
   getTourPrices, createPrice, deletePrice, createImage, deleteImage,
   type TourForm,
-} from "../../services/tourApi";import { listDestinations } from "../../services/destinationApi";
-import type { Destination, Tour, TourDetail, TourPrice } from "../../types";
+} from "../../services/tourApi";
+import type { Tour, TourDetail, TourPrice } from "../../types";
 import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../../components/common/common";
 import { Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
-import { Input, Textarea, Select, Field, FieldError } from "../../components/ui/fields";
+import { Input, Select, Field, FieldError } from "../../components/ui/fields";
 import { Dialog } from "../../components/ui/dialog";
 import { Tabs, TabPanel } from "../../components/ui/tabs";
 import { useToast, toastForApiError } from "../../components/ui/toast";
 import { formatVND } from "../../lib/format";
 import { label, TOUR_STATUS_LABEL } from "../../lib/labels";
 
-const EMPTY_FORM: TourForm = { tourName: "", description: "", destinationId: 0, maxSeats: 20, status: "Draft" };
+const EMPTY_FORM: TourForm = {
+  tourName: "",
+  description: "",
+  destinationId: 0,
+  maxSeats: 20,
+  status: "Draft",
+  departureDate: "",
+  departureLocation: "",
+  duration: "",
+};
 
 export function AdminTours() {
   const { push } = useToast();
@@ -25,7 +34,6 @@ export function AdminTours() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
-  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [tab, setTab] = useState(0);
@@ -57,7 +65,6 @@ export function AdminTours() {
 
   useEffect(() => {
     load(1);
-    listDestinations().then(setDestinations).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -85,6 +92,9 @@ export function AdminTours() {
         destinationId: d.destinationId,
         maxSeats: d.maxSeats,
         status: d.status,
+        departureDate: d.departureDate ?? "",
+        departureLocation: d.departureLocation ?? "",
+        duration: d.duration ?? "",
       });
       setPrices(d.prices);
       setImages(d.images);
@@ -96,14 +106,6 @@ export function AdminTours() {
   function validate(): boolean {
     if (!form.tourName.trim() || form.tourName.trim().length > 200) {
       setFieldError("Tên tour bắt buộc, tối đa 200 ký tự.");
-      return false;
-    }
-    if (!form.destinationId) {
-      setFieldError("Chọn điểm đến.");
-      return false;
-    }
-    if (form.maxSeats <= 0) {
-      setFieldError("Số chỗ phải lớn hơn 0.");
       return false;
     }
     setFieldError("");
@@ -261,22 +263,20 @@ export function AdminTours() {
               <Field label="Tên tour (tối đa 200 ký tự)">
                 <Input placeholder="VD: Vịnh Hạ Long 2N1Đ" value={form.tourName} onChange={(e) => setForm({ ...form, tourName: e.target.value })} />
               </Field>
-              <Field label="Mô tả">
-                <Textarea placeholder="Giới thiệu tour" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Field label="Mã tour">
+                <Input placeholder="VD: NDSGN612-061-210925XE-V" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </Field>
-              <Field label="Điểm đến">
-                <Select value={form.destinationId} onChange={(e) => setForm({ ...form, destinationId: Number(e.target.value) })}>
-                  <option value={0}>Chọn điểm đến</option>
-                  {destinations.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.regionName})
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Số chỗ tối đa">
-                <Input type="number" min={1} placeholder="VD: 30" value={form.maxSeats} onChange={(e) => setForm({ ...form, maxSeats: Number(e.target.value) })} />
-              </Field>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <Field label="Ngày khởi hành">
+                  <Input type="date" value={form.departureDate} onChange={(e) => setForm({ ...form, departureDate: e.target.value })} />
+                </Field>
+                <Field label="Địa điểm xuất phát">
+                  <Input placeholder="VD: TP. Hồ Chí Minh" value={form.departureLocation} onChange={(e) => setForm({ ...form, departureLocation: e.target.value })} />
+                </Field>
+                <Field label="Thời gian du lịch">
+                  <Input placeholder="VD: 5N4D" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+                </Field>
+              </div>
               <Field label="Trạng thái">
                 <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                   <option value="Draft">Nháp (Draft)</option>

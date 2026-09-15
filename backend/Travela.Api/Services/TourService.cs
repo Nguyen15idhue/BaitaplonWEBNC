@@ -73,6 +73,8 @@ public class TourService
         {
             TourName = req.TourName.Trim(), Description = req.Description?.Trim() ?? string.Empty,
             DestinationId = req.DestinationId, MaxSeats = req.MaxSeats, Status = req.Status,
+            DepartureDate = req.DepartureDate, DepartureLocation = req.DepartureLocation?.Trim(),
+            Duration = req.Duration?.Trim(),
             CreatedAt = DateTime.UtcNow
         };
         _db.Tours.Add(t);
@@ -93,6 +95,9 @@ public class TourService
         t.DestinationId = req.DestinationId;
         t.MaxSeats = req.MaxSeats;
         t.Status = req.Status;
+        t.DepartureDate = req.DepartureDate;
+        t.DepartureLocation = req.DepartureLocation?.Trim();
+        t.Duration = req.Duration?.Trim();
         await _db.SaveChangesAsync();
         await _audit.LogAsync(actorId, "Tour.Update", "Tour", id, old, $"{t.TourName}|{t.Status}");
         return await GetDetailAsync(id, publicOnly: false);
@@ -248,6 +253,7 @@ public class TourService
             Id = list.Id, TourName = list.TourName, Thumbnail = list.Thumbnail, PriceFrom = list.PriceFrom,
             Destination = list.Destination, Status = list.Status,
             Description = t.Description, MaxSeats = t.MaxSeats, DestinationId = t.DestinationId,
+            DepartureDate = t.DepartureDate, DepartureLocation = t.DepartureLocation, Duration = t.Duration,
             Images = t.Images.OrderBy(i => i.SortOrder).Select(ToImageDto).ToList(),
             Prices = EffectivePrices(t, now).OrderByDescending(p => p.EffectiveDate).Select(ToPriceDto).ToList()
         };

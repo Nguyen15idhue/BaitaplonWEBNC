@@ -10,6 +10,9 @@ public class Tour
     public int MaxSeats { get; set; }
     public string Status { get; set; } = "Draft";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? DepartureDate { get; set; }
+    public string? DepartureLocation { get; set; }
+    public string? Duration { get; set; }
 
     public Destination? Destination { get; set; }
     public ICollection<Price> Prices { get; set; } = new List<Price>();
