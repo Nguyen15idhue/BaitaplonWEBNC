@@ -40,6 +40,9 @@ public class TourDetailDto : TourListDto
     public int DestinationId { get; set; }
     public List<ImageDto> Images { get; set; } = new();
     public List<PriceDto> Prices { get; set; } = new();
+    public DateTime? DepartureDate { get; set; }
+    public string? DepartureLocation { get; set; }
+    public string? Duration { get; set; }
 }
 
 public class CreateTourRequest
@@ -49,6 +52,9 @@ public class CreateTourRequest
     public int DestinationId { get; set; }
     public int MaxSeats { get; set; }
     public string Status { get; set; } = "Draft";
+    public DateTime? DepartureDate { get; set; }
+    public string? DepartureLocation { get; set; }
+    public string? Duration { get; set; }
 }
 
 public class UpdateTourRequest : CreateTourRequest

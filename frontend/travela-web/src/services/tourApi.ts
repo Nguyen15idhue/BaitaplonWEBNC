@@ -64,6 +64,9 @@ export interface TourForm {
   destinationId: number;
   maxSeats: number;
   status: string;
+  departureDate: string;
+  departureLocation: string;
+  duration: string;
 }
 
 export async function createTour(body: TourForm): Promise<TourDetail> {

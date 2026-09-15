@@ -29,6 +29,9 @@ export interface Tour {
   thumbnail: string;
   destination: Destination | null;
   status: string;
+  departureDate?: string;
+  departureLocation?: string;
+  duration?: string;
 }
 
 export interface TrackingStep {
@@ -81,6 +84,9 @@ export interface TourDetail extends Tour {
   destinationId: number;
   images: TourImage[];
   prices: TourPrice[];
+  departureDate?: string;
+  departureLocation?: string;
+  duration?: string;
 }
 
 // F1b: khớp DTO Auth BE + lỗi chuẩn { error, message }.
