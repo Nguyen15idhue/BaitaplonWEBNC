@@ -5,6 +5,7 @@ import type { TourDetail } from "../types";
 import { Loading, ErrorState } from "../components/common/common";
 import { SafeImage } from "../components/common/SafeImage";
 import { formatVND } from "../lib/format";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function TourDetailPage() {
   const { id } = useParams();
@@ -28,33 +29,65 @@ export function TourDetailPage() {
 
   const images = [...tour.images].sort((a, b) => a.sortOrder - b.sortOrder);
 
+  function prevImg() {
+    setActiveImg((i) => (i === 0 ? images.length - 1 : i - 1));
+  }
+
+  function nextImg() {
+    setActiveImg((i) => (i === images.length - 1 ? 0 : i + 1));
+  }
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="mb-8 text-center text-3xl font-bold leading-tight text-[#535041] md:text-4xl">
         {tour.tourName}
       </h1>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="overflow-hidden rounded-xl border-2 border-[#A79F84]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="overflow-hidden rounded-xl border-2 border-[#A79F84] bg-[#fffaf2]">
           {images.length === 0 ? (
-            <div className="flex h-72 items-center justify-center bg-gray-100 text-gray-400">
+            <div className="flex h-96 items-center justify-center text-[#535041]/50">
               Chưa có ảnh
             </div>
           ) : (
             <>
-              <SafeImage
-                src={images[activeImg]?.imageUrl ?? ""}
-                alt={tour.tourName}
-                className="h-72 w-full object-cover md:h-96"
-              />
+              <div className="relative h-80 md:h-[480px]">
+                <SafeImage
+                  src={images[activeImg]?.imageUrl ?? ""}
+                  alt={tour.tourName}
+                  className="h-full w-full object-cover"
+                />
+                {images.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImg}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white transition-colors hover:bg-black/60"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={nextImg}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white transition-colors hover:bg-black/60"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+              </div>
               {images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto bg-white p-2">
+                <div className="flex gap-2 overflow-x-auto p-3">
                   {images.map((img, i) => (
-                    <button key={img.id} onClick={() => setActiveImg(i)} aria-label={`Xem ảnh ${i + 1}`}>
+                    <button
+                      key={img.id}
+                      onClick={() => setActiveImg(i)}
+                      className={`h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 transition-colors ${
+                        i === activeImg ? "border-[#A79F84]" : "border-transparent"
+                      }`}
+                    >
                       <SafeImage
                         src={img.imageUrl}
                         alt={img.caption}
-                        className={`h-16 w-24 rounded object-cover ${i === activeImg ? "ring-2 ring-[#A79F84]" : ""}`}
+                        className="h-full w-full object-cover"
                       />
                     </button>
                   ))}
@@ -64,40 +97,44 @@ export function TourDetailPage() {
           )}
         </div>
 
-        <div className="flex flex-col gap-4 rounded-xl border-2 border-[#A79F84] bg-white p-6">
-          <div>
-            <p className="text-sm text-[#535041]">Giá từ</p>
-            <p className="text-3xl font-bold text-[#A79F84]">
-              {formatVND(tour.priceFrom)} <span className="text-base font-normal text-[#535041]">/ khách</span>
-            </p>
-          </div>
+        <div className="flex flex-col rounded-xl border-2 border-[#A79F84] bg-[#fffaf2] p-6">
+          <div className="flex flex-1 flex-col gap-4">
+            <h2 className="text-lg font-bold text-[#535041]">{tour.tourName}</h2>
 
-          <div className="flex flex-col gap-3 border-t border-[#A79F84]/30 pt-4">
-            <div className="flex gap-2">
-              <span className="font-medium text-[#535041]">Mã tour:</span>
-              <span className="text-[#535041]">{tour.description || `NDSGN${tour.id.toString().padStart(4, "0")}`}</span>
+            <div className="flex flex-col gap-3 text-sm">
+              <div className="flex gap-2">
+                <span className="font-medium text-[#535041]">Mã tour:</span>
+                <span className="text-[#535041]">{tour.description || `NDSGN${tour.id.toString().padStart(4, "0")}`}</span>
+              </div>
+              {tour.departureDate && (
+                <div className="flex gap-2">
+                  <span className="font-medium text-[#535041]">Khởi hành:</span>
+                  <span className="text-[#535041]">{new Date(tour.departureDate).toLocaleDateString("vi-VN")}</span>
+                </div>
+              )}
+              {tour.departureLocation && (
+                <div className="flex gap-2">
+                  <span className="font-medium text-[#535041]">Địa điểm:</span>
+                  <span className="text-[#535041]">{tour.departureLocation}</span>
+                </div>
+              )}
+              {tour.duration && (
+                <div className="flex gap-2">
+                  <span className="font-medium text-[#535041]">Thời gian:</span>
+                  <span className="text-[#535041]">{tour.duration}</span>
+                </div>
+              )}
             </div>
-            {tour.departureDate && (
-              <div className="flex gap-2">
-                <span className="font-medium text-[#535041]">Khởi hành:</span>
-                <span className="text-[#535041]">{new Date(tour.departureDate).toLocaleDateString("vi-VN")}</span>
-              </div>
-            )}
-            {tour.departureLocation && (
-              <div className="flex gap-2">
-                <span className="font-medium text-[#535041]">Địa điểm xuất phát:</span>
-                <span className="text-[#535041]">{tour.departureLocation}</span>
-              </div>
-            )}
-            {tour.duration && (
-              <div className="flex gap-2">
-                <span className="font-medium text-[#535041]">Thời gian:</span>
-                <span className="text-[#535041]">{tour.duration}</span>
-              </div>
-            )}
+
+            <div className="mt-4 rounded-lg bg-[#A79F84]/10 p-4 text-center">
+              <p className="text-sm text-[#535041]">Giá từ</p>
+              <p className="text-2xl font-bold text-[#A79F84]">
+                {formatVND(tour.priceFrom)} <span className="text-sm font-normal text-[#535041]">/ khách</span>
+              </p>
+            </div>
           </div>
 
-          <Link to={`/booking/${tour.id}`} className="mt-auto">
+          <Link to={`/booking/${tour.id}`} className="mt-6">
             <button className="w-full rounded-lg bg-[#A79F84] px-6 py-3 text-base font-semibold uppercase text-white transition-colors hover:bg-[#968c73]">
               Đặt ngay
             </button>

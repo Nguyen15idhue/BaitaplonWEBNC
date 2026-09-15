@@ -84,7 +84,7 @@ export function Home() {
           {tours.length === 0 ? (
             <EmptyState message="Chưa có tour." />
           ) : (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
               {tours.map((t) => (
                 <TourCard key={t.id} tour={t} showDetails />
               ))}

@@ -11,10 +11,10 @@ interface TourCardProps {
 
 export function TourCard({ tour, showDetails = false }: TourCardProps) {
   return (
-    <Link to={`/tours/${tour.id}`}>
-      <div className="overflow-hidden rounded-lg border-2 border-[#A79F84] bg-white transition-shadow hover:shadow-lg">
+    <Link to={`/tours/${tour.id}`} className="flex h-full w-full">
+      <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border-2 border-[#A79F84] bg-white transition-shadow hover:shadow-lg">
         <SafeImage src={tour.thumbnail} alt={tour.tourName} className="h-48 w-full object-cover" />
-        <div className="flex flex-col gap-2 p-4">
+        <div className="flex flex-1 flex-col gap-2 p-4">
           <h3 className="text-base font-bold text-[#535041] line-clamp-2">{tour.tourName}</h3>
 
           {showDetails && (
@@ -51,7 +51,7 @@ export function TourCard({ tour, showDetails = false }: TourCardProps) {
             </div>
           )}
 
-          <div className="mt-2 flex items-center justify-between">
+          <div className="mt-auto flex items-center justify-between pt-2">
             <p className="text-sm text-[#535041]">
               Giá từ <span className="font-bold text-[#A79F84]">{formatVND(tour.priceFrom)}</span>
             </p>

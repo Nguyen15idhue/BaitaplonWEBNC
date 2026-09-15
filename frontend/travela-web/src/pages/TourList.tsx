@@ -155,7 +155,7 @@ export function TourList() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
             {tours.map((t) => (
               <TourCard key={t.id} tour={t} />
             ))}
