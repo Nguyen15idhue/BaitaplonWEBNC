@@ -19,6 +19,7 @@ public class TravelaDbContext : DbContext
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
+    public DbSet<SupportRequest> SupportRequests => Set<SupportRequest>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -158,6 +159,25 @@ public class TravelaDbContext : DbContext
             e.HasOne(x => x.Booking).WithMany()
                 .HasForeignKey(x => x.BookingId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.UserId, x.Key }).IsUnique();
+            e.HasIndex(x => x.CreatedAt);
+        });
+
+        b.Entity<SupportRequest>(e =>
+        {
+            e.ToTable("support_requests");
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Email).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(20);
+            e.Property(x => x.Subject).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Message).HasColumnType("text").IsRequired();
+            e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            e.Property(x => x.AdminNote).HasColumnType("text");
+            e.HasOne(x => x.User).WithMany()
+                .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Handler).WithMany()
+                .HasForeignKey(x => x.HandledBy).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => x.Status);
+            e.HasIndex(x => x.UserId);
             e.HasIndex(x => x.CreatedAt);
         });
     }

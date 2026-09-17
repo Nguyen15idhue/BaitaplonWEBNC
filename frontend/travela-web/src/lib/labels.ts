@@ -25,6 +25,12 @@ export const USER_STATUS_LABEL: Record<string, string> = {
   Locked: "Đã khóa",
 };
 
+export const SUPPORT_STATUS_LABEL: Record<string, string> = {
+  New: "Mới",
+  InProgress: "Đang xử lý",
+  Resolved: "Đã xử lý",
+};
+
 export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "User.Lock": "Khóa người dùng",
   "User.Unlock": "Mở khóa người dùng",

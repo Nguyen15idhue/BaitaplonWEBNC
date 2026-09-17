@@ -1,26 +1,47 @@
 import { useState } from "react";
 import { Phone, Mail } from "lucide-react";
-import { useToast } from "../components/ui/toast";
+import { useToast, toastForApiError } from "../components/ui/toast";
 import { Button } from "../components/ui/button";
+import { createSupport } from "../services/supportApi";
+import { useAuth } from "../lib/auth-context";
+
+const SUBJECTS = ["Tư vấn tour", "Hỗ trợ đặt tour", "Chính sách hủy/đổi", "Khiếu nại", "Khác"];
 
 export function Contact() {
   const { push } = useToast();
-  const [form, setForm] = useState({ name: "", phone: "", address: "", email: "", content: "" });
+  const { user } = useAuth();
+  const [form, setForm] = useState({
+    name: user?.username ?? "",
+    phone: "",
+    email: user?.email ?? "",
+    subject: SUBJECTS[0],
+    content: "",
+  });
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim() || !form.content.trim()) {
-      push("Vui lòng nhập họ tên và nội dung.", "error");
+    if (form.name.trim().length < 2 || form.content.trim().length < 10) {
+      push("Họ tên từ 2 ký tự, nội dung từ 10 ký tự.", "error");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) {
+      push("Email không hợp lệ.", "error");
       return;
     }
     setSubmitting(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
-      push("Đã gửi thông tin liên hệ.", "success");
-      setForm({ name: "", phone: "", address: "", email: "", content: "" });
-    } catch {
-      push("Gửi thất bại, thử lại sau.", "error");
+      await createSupport({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        subject: form.subject,
+        message: form.content.trim(),
+      });
+      push("Đã gửi yêu cầu. Admin sẽ phản hồi sớm.", "success");
+      setForm({ name: "", phone: "", email: "", subject: SUBJECTS[0], content: "" });
+    } catch (err) {
+      toastForApiError(push, err);
     } finally {
       setSubmitting(false);
     }
@@ -68,21 +89,27 @@ export function Contact() {
               className="rounded-full border border-[#e0dbd0] bg-white px-4 py-3 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
             />
             <input
-              placeholder="Địa chỉ"
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="rounded-full border border-[#e0dbd0] bg-white px-4 py-3 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
-            />
-            <input
               placeholder="Email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="rounded-full border border-[#e0dbd0] bg-white px-4 py-3 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
             />
+            <select
+              value={form.subject}
+              onChange={(e) => setForm({ ...form, subject: e.target.value })}
+              className="rounded-full border border-[#e0dbd0] bg-white px-4 py-3 text-sm text-[#535041] focus:outline-none focus:ring-2 focus:ring-[#A79F84]"
+              aria-label="Chủ đề"
+            >
+              {SUBJECTS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col gap-3">
             <textarea
-              placeholder="Nội dung"
+              placeholder="Nội dung (từ 10 ký tự)"
               rows={5}
               value={form.content}
               onChange={(e) => setForm({ ...form, content: e.target.value })}

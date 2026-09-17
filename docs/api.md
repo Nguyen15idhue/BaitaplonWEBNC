@@ -48,6 +48,13 @@
 - [x] GET /api/audit-logs?action&entityType&entityId&from&to (Admin, trả actorUsername)
 - [x] GET /api/admin/stats (Admin: usersTotal, toursTotal, bookingsTotal, revenuePaid, bookingsByStatus, topTours)
 
+## Support (yêu cầu hỗ trợ / liên hệ)
+- [x] POST /api/support-requests (public, cả khách vãng lai; đăng nhập thì tự gắn userId)
+- [x] GET /api/support-requests?status&search (Admin, PagedResult)
+- [x] GET /api/support-requests/mine (đăng nhập: yêu cầu của chính mình)
+- [x] GET /api/support-requests/{id} (Admin)
+- [x] PUT /api/support-requests/{id}/status (Admin: New -> InProgress -> Resolved, cho phép New -> Resolved; sai thứ tự 400; có audit Support.Status)
+
 ## Health
 - [x] GET /health -> `{ status, db, time }` (DB down → 503)
 - [x] GET /health/live -> liveness 200

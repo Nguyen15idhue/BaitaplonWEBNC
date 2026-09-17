@@ -140,3 +140,19 @@ export interface AuditLog {
   newValue: string | null;
   createdAt: string;
 }
+
+// Khớp SupportRequestDto BE (public gửi, admin xử lý New -> InProgress -> Resolved).
+export interface SupportRequest {
+  id: number;
+  userId: number | null;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  status: string;
+  adminNote: string | null;
+  handledBy: number | null;
+  handledAt: string | null;
+  createdAt: string;
+}

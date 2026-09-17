@@ -30,6 +30,7 @@ builder.Services.AddScoped<TourService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<CheckoutService>();
 builder.Services.AddScoped<AdminStatsService>();
+builder.Services.AddScoped<SupportService>();
 
 // Fail-fast JWT ở Production (H13): thiếu/ngắn secret thì không cho chạy prod.
 var jwtSecret = builder.Configuration["JWT_SECRET"]
