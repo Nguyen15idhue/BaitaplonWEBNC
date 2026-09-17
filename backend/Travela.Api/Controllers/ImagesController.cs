@@ -23,6 +23,16 @@ public class ImagesController : BaseApiController
         return StatusCode(201, await _tours.CreateImageAsync(tourId, req, CurrentUserId()));
     }
 
+    // Upload file ảnh song song với cơ chế link URL (multipart/form-data: file + caption? + sortOrder).
+    [HttpPost("api/tours/{tourId:int}/images/upload")]
+    [Authorize(Roles = "Admin")]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> Upload(int tourId, [FromForm] IFormFile? file,
+        [FromForm] string? caption, [FromForm] int sortOrder)
+    {
+        return StatusCode(201, await _tours.UploadImageAsync(tourId, file, caption, sortOrder, CurrentUserId()));
+    }
+
     [HttpDelete("api/images/{id:int}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)

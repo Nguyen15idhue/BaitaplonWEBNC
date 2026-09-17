@@ -46,6 +46,20 @@ export interface TourDetail extends Tour {
   destinationId: number;
   images: TourImage[];
   prices: TourPrice[];
+  // Nội dung chi tiết tour (null = chưa nhập) — khớp TourDetailDto BE.
+  route: string | null;
+  itinerary: string | null;
+  transport: string | null;
+  accommodation: string | null;
+  meals: string | null;
+  sightseeing: string | null;
+  guide: string | null;
+  included: string | null;
+  excluded: string | null;
+  audience: string | null;
+  insurance: string | null;
+  terms: string | null;
+  contactInfo: string | null;
 }
 
 export interface TrackingStep {

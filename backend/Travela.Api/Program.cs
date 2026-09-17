@@ -180,6 +180,9 @@ using (var scope = app.Services.CreateScope())
 
 app.UseMiddleware<ExceptionMiddleware>();
 
+// Ảnh tour upload lưu ở wwwroot/uploads, phục vụ public (không cần đăng nhập).
+app.UseStaticFiles();
+
 // C5: Swagger chỉ ngoài Production.
 if (!app.Environment.IsProduction())
 {

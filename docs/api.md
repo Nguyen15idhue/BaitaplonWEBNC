@@ -26,10 +26,10 @@
 - [x] GET /api/tours (chỉ Published + filter/sort/page, kèm priceFrom + bookedSeats/availableSeats + startDate/endDate + departureDate/departureLocation/duration)
 - [x] GET /api/tours/{id} (public: chỉ Published; Admin xem được Draft/Hidden)
 - [x] GET /api/tours/all (Admin + filter status/sort/minPrice/maxPrice)
-- [x] POST/PUT/DELETE /api/tours/{id} (Admin, có booking thì Hidden; hạ MaxSeats dưới số đã bán → 422; StartDate phải < EndDate)
+- [x] POST/PUT/DELETE /api/tours/{id} (Admin, có booking thì Hidden; hạ MaxSeats dưới số đã bán → 422; StartDate phải < EndDate; nội dung chi tiết: route/itinerary/transport/accommodation/meals/sightseeing/guide/included/excluded/audience/insurance/terms/contactInfo, ngắn ≤500, dài ≤10000)
 - [x] GET /api/tours/{id}/prices — chỉ giá hiệu lực mới nhất từng nguồn
 - [x] POST /api/tours/{id}/prices, PUT/DELETE /api/prices/{id} (Admin)
-- [x] POST /api/tours/{id}/images, DELETE /api/images/{id} (Admin, tối đa 10 ảnh)
+- [x] POST /api/tours/{id}/images (Admin, JSON imageUrl http/https, tối đa 10 ảnh), POST /api/tours/{id}/images/upload (Admin, multipart file ảnh ≤5MB: jpg/png/webp/gif, lưu /uploads), DELETE /api/images/{id} (Admin, ảnh upload cũng xóa file vật lý)
 
 ## Destinations
 - [x] GET /api/destinations, GET /api/destinations/{id}

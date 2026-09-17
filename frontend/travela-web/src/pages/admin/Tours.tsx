@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   getTourDetail, adminListTours, createTour, updateTour, deleteTour,
-  getTourPrices, createPrice, updatePrice, deletePrice, createImage, deleteImage,
+  getTourPrices, createPrice, updatePrice, deletePrice, createImage, uploadImage, deleteImage,
   type TourForm,
 } from "../../services/tourApi";
 import { listDestinations } from "../../services/destinationApi";
@@ -28,6 +28,19 @@ const EMPTY_FORM: TourForm = {
   departureDate: "",
   departureLocation: "",
   duration: "",
+  route: "",
+  itinerary: "",
+  transport: "",
+  accommodation: "",
+  meals: "",
+  sightseeing: "",
+  guide: "",
+  included: "",
+  excluded: "",
+  audience: "",
+  insurance: "",
+  terms: "",
+  contactInfo: "",
 };
 
 export function AdminTours() {
@@ -48,6 +61,7 @@ export function AdminTours() {
   const [priceForm, setPriceForm] = useState({ sourceName: "Website", priceValue: "", effectiveDate: "" });
   const [editingPriceId, setEditingPriceId] = useState<number | null>(null);
   const [imageForm, setImageForm] = useState({ imageUrl: "", caption: "", sortOrder: "1" });
+  const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<Tour | null>(null);
   const [saving, setSaving] = useState(false);
   const pageSize = 12;
@@ -103,6 +117,19 @@ export function AdminTours() {
         departureDate: (d.departureDate ?? "").slice(0, 10),
         departureLocation: d.departureLocation ?? "",
         duration: d.duration ?? "",
+        route: d.route ?? "",
+        itinerary: d.itinerary ?? "",
+        transport: d.transport ?? "",
+        accommodation: d.accommodation ?? "",
+        meals: d.meals ?? "",
+        sightseeing: d.sightseeing ?? "",
+        guide: d.guide ?? "",
+        included: d.included ?? "",
+        excluded: d.excluded ?? "",
+        audience: d.audience ?? "",
+        insurance: d.insurance ?? "",
+        terms: d.terms ?? "",
+        contactInfo: d.contactInfo ?? "",
       });
       setPrices(d.prices);
       setImages(d.images);
@@ -134,15 +161,49 @@ export function AdminTours() {
       setFieldError("Ngày bắt đầu phải trước ngày kết thúc.");
       return;
     }
+    // Validate độ dài nội dung trùng BE (ngắn ≤500, dài ≤10000).
+    const shorts: [string, string | null][] = [
+      ["Tuyến", form.route], ["Phương tiện", form.transport], ["Lưu trú", form.accommodation],
+      ["HDV", form.guide], ["Đối tượng", form.audience], ["Liên hệ", form.contactInfo],
+    ];
+    for (const [name, v] of shorts)
+      if ((v?.trim().length ?? 0) > 500) {
+        setFieldError(`${name} tối đa 500 ký tự.`);
+        return;
+      }
+    const longs: [string, string | null][] = [
+      ["Lịch trình", form.itinerary], ["Ăn uống", form.meals], ["Tham quan", form.sightseeing],
+      ["Bao gồm", form.included], ["Không bao gồm", form.excluded],
+      ["Bảo hiểm", form.insurance], ["Điều kiện", form.terms],
+    ];
+    for (const [name, v] of longs)
+      if ((v?.trim().length ?? 0) > 10000) {
+        setFieldError(`${name} tối đa 10000 ký tự.`);
+        return;
+      }
     setSaving(true);
+    const opt = (v: string | null) => (v?.trim() ? v.trim() : null);
     // A4: date-only -> UTC, rỗng -> null (tour không giới hạn ngày).
     const body: TourForm = {
       ...form,
       startDate: form.startDate ? new Date(`${form.startDate}T00:00:00Z`).toISOString() : null,
       endDate: form.endDate ? new Date(`${form.endDate}T00:00:00Z`).toISOString() : null,
       departureDate: form.departureDate ? new Date(`${form.departureDate}T00:00:00Z`).toISOString() : null,
-      departureLocation: form.departureLocation?.trim() ? form.departureLocation.trim() : null,
-      duration: form.duration?.trim() ? form.duration.trim() : null,
+      departureLocation: opt(form.departureLocation),
+      duration: opt(form.duration),
+      route: opt(form.route),
+      itinerary: opt(form.itinerary),
+      transport: opt(form.transport),
+      accommodation: opt(form.accommodation),
+      meals: opt(form.meals),
+      sightseeing: opt(form.sightseeing),
+      guide: opt(form.guide),
+      included: opt(form.included),
+      excluded: opt(form.excluded),
+      audience: opt(form.audience),
+      insurance: opt(form.insurance),
+      terms: opt(form.terms),
+      contactInfo: opt(form.contactInfo),
     };
     try {
       if (editingId === null) {
@@ -236,6 +297,21 @@ export function AdminTours() {
     }
   }
 
+  async function uploadFile(f: File | undefined) {
+    if (editingId === null || !f) return;
+    setUploading(true);
+    try {
+      await uploadImage(editingId, f, imageForm.caption, Number(imageForm.sortOrder) || 1);
+      push("Đã tải ảnh lên.", "success");
+      setImages((await getTourDetail(editingId)).images);
+      load(page);
+    } catch (err) {
+      toastForApiError(push, err);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function removeImage(id: number) {
     try {
       await deleteImage(id);
@@ -307,7 +383,7 @@ export function AdminTours() {
       )}
 
       <Dialog open={dialogOpen} title={editingId === null ? "Thêm tour" : `Sửa tour #${editingId}`} onClose={() => setDialogOpen(false)} dismissible={false}>
-        <Tabs tabs={["Thông tin", "Giá", "Ảnh"]} active={tab} onChange={setTab} />
+        <Tabs tabs={["Thông tin", "Nội dung", "Giá", "Ảnh"]} active={tab} onChange={setTab} />
         {tab === 0 && (
           <TabPanel>
             <div className="flex flex-col gap-3">
@@ -363,6 +439,57 @@ export function AdminTours() {
         )}
         {tab === 1 && (
           <TabPanel>
+            <div className="flex flex-col gap-3">
+              <Field label="Tuyến hành trình (≤500 ký tự)">
+                <Input placeholder="VD: Hà Nội → Hạ Long → Ninh Bình" value={form.route ?? ""} onChange={(e) => setForm({ ...form, route: e.target.value || null })} />
+              </Field>
+              <Field label="Lịch trình chi tiết">
+                <Textarea rows={5} placeholder={"Ngày 1: đi đâu, ăn gì, tham quan gì...\nNgày 2: ..."} value={form.itinerary ?? ""} onChange={(e) => setForm({ ...form, itinerary: e.target.value || null })} />
+              </Field>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field label="Phương tiện (≤500)">
+                  <Input placeholder="VD: Ô tô, máy bay, tàu, thuyền..." value={form.transport ?? ""} onChange={(e) => setForm({ ...form, transport: e.target.value || null })} />
+                </Field>
+                <Field label="Lưu trú (≤500)">
+                  <Input placeholder="VD: Khách sạn 4 sao, resort, homestay..." value={form.accommodation ?? ""} onChange={(e) => setForm({ ...form, accommodation: e.target.value || null })} />
+                </Field>
+              </div>
+              <Field label="Ăn uống">
+                <Textarea rows={3} placeholder="VD: Bữa sáng buffet; trưa/tối nhà hàng địa phương..." value={form.meals ?? ""} onChange={(e) => setForm({ ...form, meals: e.target.value || null })} />
+              </Field>
+              <Field label="Tham quan / vé">
+                <Textarea rows={3} placeholder="VD: Vé vào cửa các điểm theo chương trình..." value={form.sightseeing ?? ""} onChange={(e) => setForm({ ...form, sightseeing: e.target.value || null })} />
+              </Field>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field label="Hướng dẫn viên (≤500)">
+                  <Input placeholder="VD: HDV theo đoàn / địa phương..." value={form.guide ?? ""} onChange={(e) => setForm({ ...form, guide: e.target.value || null })} />
+                </Field>
+                <Field label="Đối tượng / đoàn (≤500)">
+                  <Input placeholder="VD: Người lớn, trẻ em; đoàn 10–40 khách..." value={form.audience ?? ""} onChange={(e) => setForm({ ...form, audience: e.target.value || null })} />
+                </Field>
+              </div>
+              <Field label="Bao gồm">
+                <Textarea rows={3} placeholder="VD: Xe, khách sạn, ăn uống, vé, bảo hiểm..." value={form.included ?? ""} onChange={(e) => setForm({ ...form, included: e.target.value || null })} />
+              </Field>
+              <Field label="Không bao gồm">
+                <Textarea rows={3} placeholder="VD: Đồ uống, chi phí cá nhân, tip..." value={form.excluded ?? ""} onChange={(e) => setForm({ ...form, excluded: e.target.value || null })} />
+              </Field>
+              <Field label="Bảo hiểm">
+                <Textarea rows={2} placeholder="VD: Bảo hiểm du lịch nội địa..." value={form.insurance ?? ""} onChange={(e) => setForm({ ...form, insurance: e.target.value || null })} />
+              </Field>
+              <Field label="Điều kiện (đặt cọc, hủy, đổi lịch)">
+                <Textarea rows={3} placeholder="VD: Cọc 30%; hủy trước 5 ngày mất cọc..." value={form.terms ?? ""} onChange={(e) => setForm({ ...form, terms: e.target.value || null })} />
+              </Field>
+              <Field label="Thông tin liên hệ (≤500)">
+                <Input placeholder="VD: Travela — Hotline 1900 1888; HDV 09xx..." value={form.contactInfo ?? ""} onChange={(e) => setForm({ ...form, contactInfo: e.target.value || null })} />
+              </Field>
+              <FieldError message={fieldError} />
+              <Button onClick={saveTour} loading={saving}>Lưu tour</Button>
+            </div>
+          </TabPanel>
+        )}
+        {tab === 2 && (
+          <TabPanel>
             {editingId === null ? (
               <EmptyState message="Lưu tour trước rồi thêm giá." />
             ) : (
@@ -403,7 +530,7 @@ export function AdminTours() {
             )}
           </TabPanel>
         )}
-        {tab === 2 && (
+        {tab === 3 && (
           <TabPanel>
             {editingId === null ? (
               <EmptyState message="Lưu tour trước rồi thêm ảnh." />
@@ -417,6 +544,24 @@ export function AdminTours() {
                     </Button>
                   </div>
                 ))}
+                <div className="rounded-[6px] border border-dashed border-[#CBD5E1] p-3">
+                  <p className="mb-2 text-sm font-medium">Tải ảnh từ máy (jpg/png/webp/gif, ≤5MB)</p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      disabled={uploading}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = "";
+                        void uploadFile(f);
+                      }}
+                    />
+                    {uploading && <span className="text-sm text-[#64748B]">Đang tải...</span>}
+                  </div>
+                  <p className="mt-1 text-xs text-[#64748B]">Dùng chung chú thích + thứ tự bên dưới.</p>
+                </div>
+                <p className="text-sm font-medium">hoặc thêm bằng link URL</p>
                 <Input placeholder="URL ảnh http/https (≤500 ký tự)" value={imageForm.imageUrl} onChange={(e) => setImageForm({ ...imageForm, imageUrl: e.target.value })} />
                 <div className="grid grid-cols-2 gap-2">
                   <Input placeholder="Chú thích" value={imageForm.caption} onChange={(e) => setImageForm({ ...imageForm, caption: e.target.value })} />

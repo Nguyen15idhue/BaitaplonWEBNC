@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travela.Api.Data;
 
@@ -11,9 +12,11 @@ using Travela.Api.Data;
 namespace Travela.Api.Migrations
 {
     [DbContext(typeof(TravelaDbContext))]
-    partial class TravelaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917000001_AddTourContentFields")]
+    partial class AddTourContentFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -307,6 +310,9 @@ namespace Travela.Api.Migrations
                     b.Property<string>("Duration")
                         .HasColumnType("longtext");
 
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("Accommodation")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
@@ -338,12 +344,18 @@ namespace Travela.Api.Migrations
                     b.Property<string>("Meals")
                         .HasColumnType("longtext");
 
+                    b.Property<int>("MaxSeats")
+                        .HasColumnType("int");
+
                     b.Property<string>("Route")
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
 
                     b.Property<string>("Sightseeing")
                         .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Terms")
                         .HasColumnType("longtext");
@@ -352,19 +364,10 @@ namespace Travela.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
 
-                    b.Property<int>("MaxSeats")
-                        .HasColumnType("int");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("TourName")
                         .IsRequired()

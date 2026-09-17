@@ -146,6 +146,12 @@ export function TourDetailPage() {
                   </span>
                 </div>
               )}
+              {tour.route && (
+                <div className="flex gap-2">
+                  <span className="font-medium text-[#535041]">Tuyến:</span>
+                  <span className="text-[#535041]">{tour.route}</span>
+                </div>
+              )}
               {tour.destination && (
                 <div className="flex gap-2">
                   <span className="font-medium text-[#535041]">Điểm đến:</span>
@@ -197,6 +203,63 @@ export function TourDetailPage() {
           </div>
         )}
       </div>
+
+      {tour.itinerary && (
+        <div className="mt-6 rounded-xl border-2 border-[#A79F84] bg-[#fffaf2] p-6">
+          <h2 className="mb-2 text-base font-bold text-[#535041]">Lịch trình</h2>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-[#535041]">{tour.itinerary}</p>
+        </div>
+      )}
+
+      {(tour.transport || tour.accommodation || tour.meals || tour.sightseeing || tour.guide || tour.audience || tour.insurance) && (
+        <div className="mt-6 rounded-xl border-2 border-[#A79F84] bg-[#fffaf2] p-6">
+          <h2 className="mb-3 text-base font-bold text-[#535041]">Dịch vụ</h2>
+          <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+            {tour.transport && <InfoRow label="Phương tiện" value={tour.transport} />}
+            {tour.accommodation && <InfoRow label="Lưu trú" value={tour.accommodation} />}
+            {tour.meals && <InfoRow label="Ăn uống" value={tour.meals} />}
+            {tour.sightseeing && <InfoRow label="Tham quan" value={tour.sightseeing} />}
+            {tour.guide && <InfoRow label="Hướng dẫn viên" value={tour.guide} />}
+            {tour.audience && <InfoRow label="Đối tượng" value={tour.audience} />}
+            {tour.insurance && <InfoRow label="Bảo hiểm" value={tour.insurance} />}
+          </div>
+        </div>
+      )}
+
+      {(tour.included || tour.excluded) && (
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+          {tour.included && (
+            <div className="rounded-xl border-2 border-[#A79F84] bg-[#fffaf2] p-6">
+              <h2 className="mb-2 text-base font-bold text-[#535041]">Bao gồm</h2>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-[#535041]">{tour.included}</p>
+            </div>
+          )}
+          {tour.excluded && (
+            <div className="rounded-xl border-2 border-[#A79F84] bg-[#fffaf2] p-6">
+              <h2 className="mb-2 text-base font-bold text-[#535041]">Không bao gồm</h2>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-[#535041]">{tour.excluded}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(tour.terms || tour.contactInfo) && (
+        <div className="mt-6 rounded-xl border-2 border-[#A79F84] bg-[#fffaf2] p-6">
+          <div className="flex flex-col gap-3 text-sm">
+            {tour.terms && <InfoRow label="Điều kiện" value={tour.terms} />}
+            {tour.contactInfo && <InfoRow label="Liên hệ" value={tour.contactInfo} />}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-2">
+      <span className="shrink-0 font-medium text-[#535041]">{label}:</span>
+      <span className="whitespace-pre-line text-[#535041]">{value}</span>
     </div>
   );
 }

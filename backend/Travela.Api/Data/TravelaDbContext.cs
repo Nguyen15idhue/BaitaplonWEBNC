@@ -49,6 +49,13 @@ public class TravelaDbContext : DbContext
             e.ToTable("tours");
             e.Property(x => x.TourName).HasMaxLength(200).IsRequired();
             e.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            // Nội dung chi tiết: field ngắn giới hạn 500 ký tự ở DB.
+            e.Property(x => x.Route).HasMaxLength(500);
+            e.Property(x => x.Transport).HasMaxLength(500);
+            e.Property(x => x.Accommodation).HasMaxLength(500);
+            e.Property(x => x.Guide).HasMaxLength(500);
+            e.Property(x => x.Audience).HasMaxLength(500);
+            e.Property(x => x.ContactInfo).HasMaxLength(500);
             e.HasOne(x => x.Destination).WithMany(d => d.Tours)
                 .HasForeignKey(x => x.DestinationId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.TourName);

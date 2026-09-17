@@ -15,12 +15,20 @@ public class TourService
 {
     private readonly TravelaDbContext _db;
     private readonly AuditLogService _audit;
+    private readonly IWebHostEnvironment _env;
     private static readonly string[] ValidStatus = ["Draft", "Published", "Hidden"];
+    private const long MaxUploadBytes = 5 * 1024 * 1024; // 5MB
+    private static readonly Dictionary<string, string> UploadExts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".jpg"] = "jpeg", [".jpeg"] = "jpeg", [".png"] = "png",
+        [".webp"] = "webp", [".gif"] = "gif",
+    };
 
-    public TourService(TravelaDbContext db, AuditLogService audit)
+    public TourService(TravelaDbContext db, AuditLogService audit, IWebHostEnvironment env)
     {
         _db = db;
         _audit = audit;
+        _env = env;
     }
 
     public async Task<PagedResult<TourListDto>> ListAsync(
@@ -77,6 +85,13 @@ public class TourService
             StartDate = req.StartDate, EndDate = req.EndDate,
             DepartureDate = req.DepartureDate, DepartureLocation = req.DepartureLocation?.Trim(),
             Duration = req.Duration?.Trim(),
+            Route = Norm(req.Route), Itinerary = Norm(req.Itinerary),
+            Transport = Norm(req.Transport), Accommodation = Norm(req.Accommodation),
+            Meals = Norm(req.Meals), Sightseeing = Norm(req.Sightseeing),
+            Guide = Norm(req.Guide), Included = Norm(req.Included),
+            Excluded = Norm(req.Excluded), Audience = Norm(req.Audience),
+            Insurance = Norm(req.Insurance), Terms = Norm(req.Terms),
+            ContactInfo = Norm(req.ContactInfo),
             CreatedAt = DateTime.UtcNow
         };
         _db.Tours.Add(t);
@@ -108,6 +123,13 @@ public class TourService
         t.DepartureDate = req.DepartureDate;
         t.DepartureLocation = req.DepartureLocation?.Trim();
         t.Duration = req.Duration?.Trim();
+        t.Route = Norm(req.Route); t.Itinerary = Norm(req.Itinerary);
+        t.Transport = Norm(req.Transport); t.Accommodation = Norm(req.Accommodation);
+        t.Meals = Norm(req.Meals); t.Sightseeing = Norm(req.Sightseeing);
+        t.Guide = Norm(req.Guide); t.Included = Norm(req.Included);
+        t.Excluded = Norm(req.Excluded); t.Audience = Norm(req.Audience);
+        t.Insurance = Norm(req.Insurance); t.Terms = Norm(req.Terms);
+        t.ContactInfo = Norm(req.ContactInfo);
         await _db.SaveChangesAsync();
         await _audit.LogAsync(actorId, "Tour.Update", "Tour", id, old, $"{t.TourName}|{t.Status}");
         return await GetDetailAsync(id, publicOnly: false);
@@ -223,17 +245,55 @@ public class TourService
             !Uri.TryCreate(req.ImageUrl.Trim(), UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "image_url phải là URL http/https, tối đa 500 ký tự.");
+        await ValidateImageSlotAsync(tourId, req.Caption, req.SortOrder);
+        return await AddImageAsync(tourId, req.ImageUrl.Trim(), req.Caption, req.SortOrder, actorId);
+    }
+
+    // Upload file ảnh song song với cơ chế link URL: file lưu wwwroot/uploads, DB chỉ giữ path tương đối.
+    public async Task<ImageDto> UploadImageAsync(int tourId, IFormFile? file, string? caption, int sortOrder, int actorId)
+    {
+        await RequireTourAsync(tourId);
+        if (file is null || file.Length == 0)
+            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Chọn file ảnh để tải lên.");
+        if (file.Length > MaxUploadBytes)
+            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "File ảnh tối đa 5MB.");
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!UploadExts.ContainsKey(ext) || !(file.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true))
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "File phải là ảnh jpg/png/webp/gif.");
+        await ValidateImageSlotAsync(tourId, caption, sortOrder);
+
+        byte[] head = new byte[12];
+        await using (var rs = file.OpenReadStream())
+            await rs.ReadExactlyAsync(head, 0, (int)Math.Min(head.Length, file.Length));
+        if (!IsImageMagic(head, UploadExts[ext]))
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "Nội dung file không phải ảnh hợp lệ.");
+
+        var dir = Path.Combine(_env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"),
+            "uploads", "tours", tourId.ToString());
+        Directory.CreateDirectory(dir);
+        var fileName = $"{Guid.NewGuid():N}{ext}";
+        await using (var fs = new FileStream(Path.Combine(dir, fileName), FileMode.CreateNew))
+            await file.CopyToAsync(fs);
+        return await AddImageAsync(tourId, $"/uploads/tours/{tourId}/{fileName}", caption, sortOrder, actorId);
+    }
+
+    private async Task ValidateImageSlotAsync(int tourId, string? caption, int sortOrder)
+    {
         if (await _db.Images.CountAsync(i => i.TourId == tourId) >= 10)
             throw new AppException(HttpStatusCode.BadRequest, "TOO_MANY_IMAGES", "Mỗi tour tối đa 10 ảnh.");
         // M03: validate sort/caption ở server, không chỉ client.
-        if (req.SortOrder <= 0)
+        if (sortOrder <= 0)
             throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "SortOrder phải lớn hơn 0.");
-        if ((req.Caption?.Length ?? 0) > 300)
+        if ((caption?.Length ?? 0) > 300)
             throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "Caption tối đa 300 ký tự.");
+    }
+
+    private async Task<ImageDto> AddImageAsync(int tourId, string imageUrl, string? caption, int sortOrder, int actorId)
+    {
         var img = new Image
         {
-            TourId = tourId, ImageUrl = req.ImageUrl.Trim(),
-            Caption = req.Caption?.Trim() ?? string.Empty, SortOrder = req.SortOrder
+            TourId = tourId, ImageUrl = imageUrl,
+            Caption = caption?.Trim() ?? string.Empty, SortOrder = sortOrder
         };
         _db.Images.Add(img);
         await _db.SaveChangesAsync();
@@ -243,6 +303,16 @@ public class TourService
         return ToImageDto(img);
     }
 
+    private static bool IsImageMagic(byte[] h, string kind) => kind switch
+    {
+        "jpeg" => h.Length >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF,
+        "png" => h.Length >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47,
+        "gif" => h.Length >= 4 && h[0] == 0x47 && h[1] == 0x49 && h[2] == 0x46 && h[3] == 0x38,
+        "webp" => h.Length >= 12 && h[0] == 0x52 && h[1] == 0x49 && h[2] == 0x46 && h[3] == 0x46
+            && h[8] == 0x57 && h[9] == 0x45 && h[10] == 0x42 && h[11] == 0x50,
+        _ => false,
+    };
+
     public async Task DeleteImageAsync(int id, int actorId = 0)
     {
         var img = await _db.Images.FindAsync(id)
@@ -250,6 +320,17 @@ public class TourService
         var old = img.ImageUrl;
         _db.Images.Remove(img);
         await _db.SaveChangesAsync();
+        // Ảnh upload thì xóa cả file vật lý (best-effort, lỗi thì bỏ qua).
+        if (old.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var path = Path.Combine(_env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"),
+                    old.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch { /* bỏ qua: DB đã xóa là đủ */ }
+        }
         if (actorId != 0)
             await _audit.LogAsync(actorId, "Image.Delete", "Image", id, old, null);
     }
@@ -277,7 +358,25 @@ public class TourService
         // A4: ngày đi phải hợp lệ (Start < End).
         if (req.StartDate.HasValue && req.EndDate.HasValue && req.StartDate.Value >= req.EndDate.Value)
             throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Ngày bắt đầu phải trước ngày kết thúc.");
+        // Nội dung chi tiết: field ngắn tối đa 500, nội dung dài tối đa 10000 ký tự.
+        foreach (var (name, value) in new (string, string?)[]
+        {
+            ("route", req.Route), ("transport", req.Transport), ("accommodation", req.Accommodation),
+            ("guide", req.Guide), ("audience", req.Audience), ("contactInfo", req.ContactInfo),
+        })
+            if ((value?.Length ?? 0) > 500)
+                throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", $"{name} tối đa 500 ký tự.");
+        foreach (var (name, value) in new (string, string?)[]
+        {
+            ("itinerary", req.Itinerary), ("meals", req.Meals), ("sightseeing", req.Sightseeing),
+            ("included", req.Included), ("excluded", req.Excluded),
+            ("insurance", req.Insurance), ("terms", req.Terms),
+        })
+            if ((value?.Length ?? 0) > 10000)
+                throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", $"{name} tối đa 10000 ký tự.");
     }
+
+    private static string? Norm(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private static void ValidatePrice(CreatePriceRequest req)
     {
@@ -324,6 +423,12 @@ public class TourService
             StartDate = list.StartDate, EndDate = list.EndDate,
             DepartureDate = t.DepartureDate, DepartureLocation = t.DepartureLocation, Duration = t.Duration,
             Description = t.Description, DestinationId = t.DestinationId,
+            Route = t.Route, Itinerary = t.Itinerary,
+            Transport = t.Transport, Accommodation = t.Accommodation,
+            Meals = t.Meals, Sightseeing = t.Sightseeing,
+            Guide = t.Guide, Included = t.Included, Excluded = t.Excluded,
+            Audience = t.Audience, Insurance = t.Insurance,
+            Terms = t.Terms, ContactInfo = t.ContactInfo,
             Images = t.Images.OrderBy(i => i.SortOrder).Select(ToImageDto).ToList(),
             Prices = PricingHelper.EffectivePrices(t.Prices, now).OrderByDescending(p => p.EffectiveDate).Select(ToPriceDto).ToList()
         };

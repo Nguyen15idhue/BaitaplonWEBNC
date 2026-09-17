@@ -46,6 +46,30 @@ Content-Type: application/json
 GET {{host}}/api/tours?page=1&pageSize=12
 Accept: application/json
 
+### Tour detail (kèm nội dung chi tiết + images + prices)
+GET {{host}}/api/tours/2
+Accept: application/json
+
+### Upload ảnh tour (multipart, Admin; thay file path thật khi test)
+# POST {{host}}/api/tours/2/images/upload
+# Authorization: Bearer {{access}}
+# Content-Type: multipart/form-data; boundary=----travela
+#
+# ------travela
+# Content-Disposition: form-data; name="caption"
+#
+# Bãi biển Titop
+# ------travela
+# Content-Disposition: form-data; name="sortOrder"
+#
+# 1
+# ------travela
+# Content-Disposition: form-data; name="file"; filename="halong.jpg"
+# Content-Type: image/jpeg
+#
+# < ./halong.jpg
+# ------travela--
+
 ### Admin stats
 GET {{host}}/api/admin/stats
 Authorization: Bearer {{access}}

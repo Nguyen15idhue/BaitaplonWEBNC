@@ -17,6 +17,20 @@ public class Tour
     public DateTime? DepartureDate { get; set; }
     public string? DepartureLocation { get; set; }
     public string? Duration { get; set; }
+    // Nội dung chi tiết tour (nullable để tương thích tour cũ/seed).
+    public string? Route { get; set; }
+    public string? Itinerary { get; set; }
+    public string? Transport { get; set; }
+    public string? Accommodation { get; set; }
+    public string? Meals { get; set; }
+    public string? Sightseeing { get; set; }
+    public string? Guide { get; set; }
+    public string? Included { get; set; }
+    public string? Excluded { get; set; }
+    public string? Audience { get; set; }
+    public string? Insurance { get; set; }
+    public string? Terms { get; set; }
+    public string? ContactInfo { get; set; }
 
     public Destination? Destination { get; set; }
     public ICollection<Price> Prices { get; set; } = new List<Price>();
