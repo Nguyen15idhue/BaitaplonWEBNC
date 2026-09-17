@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Phone, Mail } from "lucide-react";
 import { useToast, toastForApiError } from "../components/ui/toast";
 import { Button } from "../components/ui/button";
@@ -18,6 +18,17 @@ export function Contact() {
     content: "",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Auth load xong sau render đầu thì điền sẵn tên/email.
+  useEffect(() => {
+    if (user) {
+      setForm((f) => ({
+        ...f,
+        name: f.name || user.username,
+        email: f.email || user.email,
+      }));
+    }
+  }, [user]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
