@@ -75,6 +75,8 @@ public class TourService
             TourName = req.TourName.Trim(), Description = req.Description?.Trim() ?? string.Empty,
             DestinationId = req.DestinationId, MaxSeats = req.MaxSeats, Status = req.Status,
             StartDate = req.StartDate, EndDate = req.EndDate,
+            DepartureDate = req.DepartureDate, DepartureLocation = req.DepartureLocation?.Trim(),
+            Duration = req.Duration?.Trim(),
             CreatedAt = DateTime.UtcNow
         };
         _db.Tours.Add(t);
@@ -103,6 +105,9 @@ public class TourService
         t.Status = req.Status;
         t.StartDate = req.StartDate;
         t.EndDate = req.EndDate;
+        t.DepartureDate = req.DepartureDate;
+        t.DepartureLocation = req.DepartureLocation?.Trim();
+        t.Duration = req.Duration?.Trim();
         await _db.SaveChangesAsync();
         await _audit.LogAsync(actorId, "Tour.Update", "Tour", id, old, $"{t.TourName}|{t.Status}");
         return await GetDetailAsync(id, publicOnly: false);
@@ -301,7 +306,10 @@ public class TourService
             BookedSeats = booked,
             AvailableSeats = Math.Max(0, t.MaxSeats - booked),
             StartDate = t.StartDate,
-            EndDate = t.EndDate
+            EndDate = t.EndDate,
+            DepartureDate = t.DepartureDate,
+            DepartureLocation = t.DepartureLocation,
+            Duration = t.Duration
         };
     }
 
@@ -314,6 +322,7 @@ public class TourService
             Destination = list.Destination, Status = list.Status,
             MaxSeats = list.MaxSeats, BookedSeats = list.BookedSeats, AvailableSeats = list.AvailableSeats,
             StartDate = list.StartDate, EndDate = list.EndDate,
+            DepartureDate = t.DepartureDate, DepartureLocation = t.DepartureLocation, Duration = t.Duration,
             Description = t.Description, DestinationId = t.DestinationId,
             Images = t.Images.OrderBy(i => i.SortOrder).Select(ToImageDto).ToList(),
             Prices = PricingHelper.EffectivePrices(t.Prices, now).OrderByDescending(p => p.EffectiveDate).Select(ToPriceDto).ToList()

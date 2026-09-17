@@ -61,6 +61,7 @@ export async function getHealth(): Promise<{ status: string; db: string; time: s
 }
 
 // Admin (B3): CRUD tour + giá + ảnh. Validate FE trùng BE.
+// Union haianh (startDate/endDate) + main (departure*) — khớp CreateTourRequest BE.
 export interface TourForm {
   tourName: string;
   description: string;
@@ -69,6 +70,9 @@ export interface TourForm {
   status: string;
   startDate: string | null;
   endDate: string | null;
+  departureDate: string | null;
+  departureLocation: string | null;
+  duration: string | null;
 }
 
 export async function createTour(body: TourForm): Promise<TourDetail> {

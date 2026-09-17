@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travela.Api.Data;
 
@@ -11,9 +12,11 @@ using Travela.Api.Data;
 namespace Travela.Api.Migrations
 {
     [DbContext(typeof(TravelaDbContext))]
-    partial class TravelaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915073024_AddTourFields")]
+    partial class AddTourFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -314,12 +317,6 @@ namespace Travela.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("TourName")
                         .IsRequired()

@@ -20,6 +20,9 @@ public class TourListDto
     public int AvailableSeats { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public DateTime? DepartureDate { get; set; }
+    public string? DepartureLocation { get; set; }
+    public string? Duration { get; set; }
 }
 
 public class PriceDto
@@ -55,6 +58,9 @@ public class CreateTourRequest
     public string Status { get; set; } = "Draft";
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public DateTime? DepartureDate { get; set; }
+    public string? DepartureLocation { get; set; }
+    public string? Duration { get; set; }
 }
 
 public class UpdateTourRequest : CreateTourRequest

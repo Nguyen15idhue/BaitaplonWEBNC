@@ -18,8 +18,11 @@ import { AdminTours } from "./pages/admin/Tours";
 import { AdminDestinations } from "./pages/admin/Destinations";
 import { AdminBookings } from "./pages/admin/Bookings";
 import { AuditLogs } from "./pages/admin/AuditLogs";
+import { AdminSettings } from "./pages/admin/Settings";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { Contact } from "./pages/Contact";
 
 export default function App() {
   return (
@@ -27,13 +30,18 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            {/* Auth pages — no header/footer */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            {/* Main pages — with header/footer */}
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/tours" element={<TourList />} />
               <Route path="/tours/:id" element={<TourDetailPage />} />
               <Route path="/destinations" element={<Destinations />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/contact" element={<Contact />} />
               <Route
                 path="/booking/:tourId"
                 element={
@@ -68,6 +76,8 @@ export default function App() {
               />
               <Route path="/403" element={<Forbidden />} />
             </Route>
+
+            {/* Admin pages */}
             <Route
               element={
                 <RoleGuard role="Admin">
@@ -81,7 +91,9 @@ export default function App() {
               <Route path="/admin/destinations" element={<AdminDestinations />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
             </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

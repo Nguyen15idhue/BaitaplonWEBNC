@@ -3,7 +3,8 @@ import {
   getTourDetail, adminListTours, createTour, updateTour, deleteTour,
   getTourPrices, createPrice, updatePrice, deletePrice, createImage, deleteImage,
   type TourForm,
-} from "../../services/tourApi";import { listDestinations } from "../../services/destinationApi";
+} from "../../services/tourApi";
+import { listDestinations } from "../../services/destinationApi";
 import type { Destination, Tour, TourDetail, TourPrice } from "../../types";
 import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../../components/common/common";
 import { Badge } from "../../components/ui/card";
@@ -16,7 +17,18 @@ import { useToast, toastForApiError } from "../../components/ui/toast";
 import { formatVND } from "../../lib/format";
 import { label, TOUR_STATUS_LABEL } from "../../lib/labels";
 
-const EMPTY_FORM: TourForm = { tourName: "", description: "", destinationId: 0, maxSeats: 20, status: "Draft", startDate: "", endDate: "" };
+const EMPTY_FORM: TourForm = {
+  tourName: "",
+  description: "",
+  destinationId: 0,
+  maxSeats: 20,
+  status: "Draft",
+  startDate: "",
+  endDate: "",
+  departureDate: "",
+  departureLocation: "",
+  duration: "",
+};
 
 export function AdminTours() {
   const { push } = useToast();
@@ -88,6 +100,9 @@ export function AdminTours() {
         status: d.status,
         startDate: d.startDate?.slice(0, 10) ?? "",
         endDate: d.endDate?.slice(0, 10) ?? "",
+        departureDate: (d.departureDate ?? "").slice(0, 10),
+        departureLocation: d.departureLocation ?? "",
+        duration: d.duration ?? "",
       });
       setPrices(d.prices);
       setImages(d.images);
@@ -125,6 +140,9 @@ export function AdminTours() {
       ...form,
       startDate: form.startDate ? new Date(`${form.startDate}T00:00:00Z`).toISOString() : null,
       endDate: form.endDate ? new Date(`${form.endDate}T00:00:00Z`).toISOString() : null,
+      departureDate: form.departureDate ? new Date(`${form.departureDate}T00:00:00Z`).toISOString() : null,
+      departureLocation: form.departureLocation?.trim() ? form.departureLocation.trim() : null,
+      duration: form.duration?.trim() ? form.duration.trim() : null,
     };
     try {
       if (editingId === null) {
@@ -296,8 +314,8 @@ export function AdminTours() {
               <Field label="Tên tour (tối đa 200 ký tự)">
                 <Input placeholder="VD: Vịnh Hạ Long 2N1Đ" value={form.tourName} onChange={(e) => setForm({ ...form, tourName: e.target.value })} />
               </Field>
-              <Field label="Mô tả">
-                <Textarea placeholder="Giới thiệu tour" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Field label="Mã tour / Mô tả">
+                <Textarea placeholder="VD: NDSGN612-061-210925XE-V — Giới thiệu tour" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </Field>
               <Field label="Điểm đến">
                 <Select value={form.destinationId} onChange={(e) => setForm({ ...form, destinationId: Number(e.target.value) })}>
@@ -318,6 +336,17 @@ export function AdminTours() {
                 </Field>
                 <Field label="Ngày kết thúc">
                   <Input type="date" value={form.endDate ?? ""} onChange={(e) => setForm({ ...form, endDate: e.target.value || null })} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <Field label="Ngày khởi hành">
+                  <Input type="date" value={form.departureDate ?? ""} onChange={(e) => setForm({ ...form, departureDate: e.target.value || null })} />
+                </Field>
+                <Field label="Địa điểm xuất phát">
+                  <Input placeholder="VD: TP. Hồ Chí Minh" value={form.departureLocation ?? ""} onChange={(e) => setForm({ ...form, departureLocation: e.target.value || null })} />
+                </Field>
+                <Field label="Thời gian du lịch">
+                  <Input placeholder="VD: 5N4D" value={form.duration ?? ""} onChange={(e) => setForm({ ...form, duration: e.target.value || null })} />
                 </Field>
               </div>
               <Field label="Trạng thái">

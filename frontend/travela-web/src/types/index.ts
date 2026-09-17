@@ -33,6 +33,11 @@ export interface Tour {
   availableSeats: number;
   startDate: string | null;
   endDate: string | null;
+  departureDate?: string | null;
+  departureLocation?: string | null;
+  duration?: string | null;
+  // Optional để tương thích UI main (TourCard dùng description); BE list không trả field này.
+  description?: string;
 }
 
 // H02: list không có description — type riêng, detail mới có.

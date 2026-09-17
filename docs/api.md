@@ -23,7 +23,7 @@
 - [x] GET /api/auth/me — user Locked → 401 ngay (lock hiệu lực tức thì)
 
 ## Tours / Prices / Images
-- [x] GET /api/tours (chỉ Published + filter/sort/page, kèm priceFrom + bookedSeats/availableSeats + startDate/endDate)
+- [x] GET /api/tours (chỉ Published + filter/sort/page, kèm priceFrom + bookedSeats/availableSeats + startDate/endDate + departureDate/departureLocation/duration)
 - [x] GET /api/tours/{id} (public: chỉ Published; Admin xem được Draft/Hidden)
 - [x] GET /api/tours/all (Admin + filter status/sort/minPrice/maxPrice)
 - [x] POST/PUT/DELETE /api/tours/{id} (Admin, có booking thì Hidden; hạ MaxSeats dưới số đã bán → 422; StartDate phải < EndDate)
