@@ -1,6 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Travela.Api.DTOs.Booking;
 using Travela.Api.Services;
@@ -10,7 +8,7 @@ namespace Travela.Api.Controllers;
 // Bookings: Customer tạo + xem/hủy đơn của mình, Admin xem tất cả + chuyển trạng thái.
 [ApiController]
 [Route("api/bookings")]
-public class BookingsController : ControllerBase
+public class BookingsController : BaseApiController
 {
     private readonly BookingService _bookings;
 
@@ -20,9 +18,11 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateBookingRequest req)
+    public async Task<IActionResult> Create(
+        [FromBody] CreateBookingRequest req,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey)
     {
-        var created = await _bookings.CreateAsync(req, CurrentUserId(), CurrentUsername());
+        var created = await _bookings.CreateAsync(req, CurrentUserId(), CurrentUsername(), idempotencyKey);
         return StatusCode(201, created);
     }
 
@@ -38,7 +38,16 @@ public class BookingsController : ControllerBase
         return Ok(await _bookings.GetAsync(id, CurrentUserId(), IsAdmin()));
     }
 
+    // A2: thanh toán bổ sung cho đơn PendingPayment kẹt.
+    [HttpPost("{id:int}/pay")]
+    public async Task<IActionResult> Pay(int id)
+    {
+        return Ok(await _bookings.PayAsync(id, CurrentUserId(), CurrentUsername(), IsAdmin()));
+    }
+
+    // B5: /status chỉ Admin; customer hủy qua /cancel.
     [HttpPut("{id:int}/status")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest req)
     {
         return Ok(await _bookings.UpdateStatusAsync(id, req.Status, req.Note, CurrentUserId(), CurrentUsername(), IsAdmin()));
@@ -48,20 +57,5 @@ public class BookingsController : ControllerBase
     public async Task<IActionResult> Cancel(int id)
     {
         return Ok(await _bookings.CancelAsync(id, CurrentUserId(), CurrentUsername()));
-    }
-
-    private bool IsAdmin() => User.IsInRole("Admin");
-
-    private int CurrentUserId()
-    {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new Middleware.AppException(HttpStatusCode.Unauthorized, "UNAUTHORIZED", "Phiên không hợp lệ.");
-        return int.Parse(sub);
-    }
-
-    private string CurrentUsername()
-    {
-        return User.FindFirstValue("username") ?? $"user{CurrentUserId()}";
     }
 }

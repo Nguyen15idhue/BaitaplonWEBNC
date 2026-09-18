@@ -1,6 +1,9 @@
 using System.Text;
+using System.Text.Json;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -12,8 +15,7 @@ using Travela.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// B1: EF Core + Pomelo MySQL. Connection lấy từ appsettings, Docker override bằng
-// biến môi trường ConnectionStrings__DefaultConnection (Server=mysql).
+// B1: EF Core + Pomelo MySQL.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<TravelaDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
@@ -27,27 +29,84 @@ builder.Services.AddScoped<DestinationService>();
 builder.Services.AddScoped<TourService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<CheckoutService>();
+builder.Services.AddScoped<AdminStatsService>();
+builder.Services.AddScoped<SupportService>();
 
-// B2: JWT access. Secret từ JWT_SECRET env (xem docker-compose), fallback dev trong code.
+// Fail-fast JWT ở Production (H13): thiếu/ngắn secret thì không cho chạy prod.
 var jwtSecret = builder.Configuration["JWT_SECRET"]
     ?? builder.Configuration["Jwt:Secret"]
     ?? "dev-only-secret-change-me-min-32-chars!!";
+var isProd = builder.Environment.IsProduction();
+if (isProd && (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.StartsWith("dev-only") || jwtSecret.Length < 32))
+    throw new InvalidOperationException("JWT_SECRET production không hợp lệ (tối thiểu 32 ký tự, không dùng fallback dev).");
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? JwtHelper.Issuer;
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? JwtHelper.Audience;
+
+static async Task WriteError(HttpContext ctx, int status, string code, string message)
+{
+    ctx.Response.StatusCode = status;
+    ctx.Response.ContentType = "application/json";
+    await ctx.Response.WriteAsync(JsonSerializer.Serialize(new { error = code, message }));
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ClockSkew = TimeSpan.FromMinutes(1)
+            ClockSkew = TimeSpan.Zero // N01: hết hạn là 401 ngay, không nới 1 phút.
+        };
+        // C01: 401/403 theo error contract {error,message}.
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async ctx =>
+            {
+                ctx.HandleResponse();
+                await WriteError(ctx.HttpContext, 401, "UNAUTHORIZED", "Thiếu hoặc phiên đăng nhập không hợp lệ.");
+            },
+            OnForbidden = async ctx =>
+            {
+                await WriteError(ctx.HttpContext, 403, "FORBIDDEN", "Bạn không có quyền thực hiện.");
+            }
         };
     });
 builder.Services.AddAuthorization();
 
-// B5: JSON camelCase chốt rõ ở đây (khớp Types FE).
+// C3: rate-limit cụm auth (fixed-window theo IP, không cần Redis).
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+    options.AddPolicy("auth-login", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            }));
+    options.AddPolicy("auth-register", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            }));
+    options.OnRejected = async (ctx, _) =>
+    {
+        ctx.HttpContext.Response.ContentType = "application/json";
+        await ctx.HttpContext.Response.WriteAsync(JsonSerializer.Serialize(
+            new { error = "TOO_MANY_REQUESTS", message = "Thao tác quá nhanh, thử lại sau 1 phút." }));
+    };
+});
+
+// B5: JSON camelCase + C01 model-validation theo contract.
 builder.Services.AddControllers(options =>
 {
     var policy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
@@ -57,6 +116,19 @@ builder.Services.AddControllers(options =>
 {
     o.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     o.JsonSerializerOptions.DictionaryKeyPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+});
+builder.Services.Configure<ApiBehaviorOptions>(o =>
+{
+    o.InvalidModelStateResponseFactory = ctx =>
+    {
+        var msg = string.Join("; ", ctx.ModelState.Values
+            .SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Take(3));
+        return new BadRequestObjectResult(new
+        {
+            error = "VALIDATION_ERROR",
+            message = string.IsNullOrWhiteSpace(msg) ? "Dữ liệu không hợp lệ." : msg
+        });
+    };
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -85,37 +157,78 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Auto-migrate + seed khi dev (ghi rõ theo B1.6). Production/Docker dev cũng chạy.
+// H14: migrate có retry/backoff, không crash khi MySQL chưa ready. Prod nên chạy job riêng.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TravelaDbContext>();
-    db.Database.Migrate();
-    DbSeeder.Seed(db);
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    const int maxTry = 10;
+    for (var i = 1; i <= maxTry; i++)
+    {
+        try
+        {
+            db.Database.Migrate();
+            DbSeeder.Seed(db);
+            break;
+        }
+        catch (Exception ex) when (i < maxTry)
+        {
+            logger.LogWarning(ex, "DB chưa sẵn sàng (lần {Try}/{Max}), thử lại sau 3s...", i, maxTry);
+            Thread.Sleep(3000);
+        }
+    }
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
 
-// Bật Swagger luôn ở skeleton để B0 demo được trong Docker (B5 có thể giới hạn lại).
-app.UseSwagger();
-app.UseSwaggerUI();
+// Ảnh tour upload lưu ở wwwroot/uploads, phục vụ public (không cần đăng nhập).
+app.UseStaticFiles();
+
+// C5: Swagger chỉ ngoài Production.
+if (!app.Environment.IsProduction())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
+
+// C02: lock có hiệu lực ngay — access token của user Locked bị chặn tại đây (+1 query).
+app.Use(async (ctx, next) =>
+{
+    if (ctx.User.Identity?.IsAuthenticated == true)
+    {
+        var sub = ctx.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+            ?? ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(sub, out var uid))
+        {
+            var db = ctx.RequestServices.GetRequiredService<TravelaDbContext>();
+            var status = await db.Users.AsNoTracking()
+                .Where(u => u.Id == uid).Select(u => u.Status).FirstOrDefaultAsync();
+            if (status == "Locked")
+            {
+                await WriteError(ctx, 401, "ACCOUNT_LOCKED", "Tài khoản đã bị khóa.");
+                return;
+            }
+        }
+    }
+    await next();
+});
+
 app.UseAuthorization();
 
 // Không UseHttpsRedirection trong container (chỉ có HTTP 8080).
 app.MapControllers();
 
-// Health check: kiểm tra kết nối DB thật (B1 nâng cấp từ skeleton not-configured).
+// M04: readiness trả 503 khi DB down (liveness vẫn qua /health/live).
+app.MapGet("/health/live", () => Results.Ok(new { status = "ok", time = DateTime.UtcNow })).AllowAnonymous();
 app.MapGet("/health", async (TravelaDbContext db) =>
 {
     var ok = await db.Database.CanConnectAsync();
-    return Results.Ok(new
-    {
-        status = ok ? "ok" : "degraded",
-        db = ok ? "up" : "down",
-        time = DateTime.UtcNow
-    });
+    if (!ok) return Results.Json(new { status = "degraded", db = "down", time = DateTime.UtcNow }, statusCode: 503);
+    return Results.Ok(new { status = "ok", db = "up", time = DateTime.UtcNow });
 }).AllowAnonymous();
 
 app.Run();

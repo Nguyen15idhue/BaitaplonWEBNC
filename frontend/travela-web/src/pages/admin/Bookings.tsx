@@ -148,7 +148,7 @@ export function AdminBookings() {
             </p>
             <h3 className="font-semibold">Lịch trình:</h3>
             <ul className="flex flex-col gap-1">
-                {detail.tracking.map((t, i) => (
+                {(detail.tracking ?? []).map((t, i) => (
                   <li key={i} className="text-[#64748B]">
                     <Badge tone="muted">{label(BOOKING_STATUS_LABEL, t.status)}</Badge> {new Date(t.at).toLocaleString("vi-VN")} · bởi {t.by}
                     {t.note ? ` · ${t.note}` : ""}

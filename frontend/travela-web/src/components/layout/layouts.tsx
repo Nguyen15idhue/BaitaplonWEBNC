@@ -77,6 +77,7 @@ const ADMIN_LINKS = [
   { to: "/admin/tours", label: "Tour" },
   { to: "/admin/destinations", label: "Điểm đến" },
   { to: "/admin/bookings", label: "Đơn đặt" },
+  { to: "/admin/support-requests", label: "Hỗ trợ" },
   { to: "/admin/audit-logs", label: "Lịch sử" },
   { to: "/admin/settings", label: "Hình ảnh" },
 ];

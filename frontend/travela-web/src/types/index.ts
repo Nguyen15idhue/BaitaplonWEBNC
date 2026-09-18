@@ -24,14 +24,42 @@ export interface Destination {
 export interface Tour {
   id: number;
   tourName: string;
-  description: string;
   priceFrom: number;
   thumbnail: string;
   destination: Destination | null;
   status: string;
-  departureDate?: string;
-  departureLocation?: string;
-  duration?: string;
+  maxSeats: number;
+  bookedSeats: number;
+  availableSeats: number;
+  startDate: string | null;
+  endDate: string | null;
+  departureDate?: string | null;
+  departureLocation?: string | null;
+  duration?: string | null;
+  // Optional để tương thích UI main (TourCard dùng description); BE list không trả field này.
+  description?: string;
+}
+
+// H02: list không có description — type riêng, detail mới có.
+export interface TourDetail extends Tour {
+  description: string;
+  destinationId: number;
+  images: TourImage[];
+  prices: TourPrice[];
+  // Nội dung chi tiết tour (null = chưa nhập) — khớp TourDetailDto BE.
+  route: string | null;
+  itinerary: string | null;
+  transport: string | null;
+  accommodation: string | null;
+  meals: string | null;
+  sightseeing: string | null;
+  guide: string | null;
+  included: string | null;
+  excluded: string | null;
+  audience: string | null;
+  insurance: string | null;
+  terms: string | null;
+  contactInfo: string | null;
 }
 
 export interface TrackingStep {
@@ -56,7 +84,7 @@ export interface Booking {
 
 export interface Checkout {
   id: number;
-  bookingId: number;
+  bookingId?: number;
   amount: number;
   status: string;
   paymentMethod?: string;
@@ -78,17 +106,6 @@ export interface TourPrice {
   effectiveDate: string;
 }
 
-export interface TourDetail extends Tour {
-  description: string;
-  maxSeats: number;
-  destinationId: number;
-  images: TourImage[];
-  prices: TourPrice[];
-  departureDate?: string;
-  departureLocation?: string;
-  duration?: string;
-}
-
 // F1b: khớp DTO Auth BE + lỗi chuẩn { error, message }.
 export interface AuthResponse {
   accessToken: string;
@@ -99,4 +116,43 @@ export interface AuthResponse {
 export interface ApiError {
   error: string;
   message: string;
+}
+
+// C07/A5: khớp AdminStatsDto BE.
+export interface AdminStats {
+  usersTotal: number;
+  toursTotal: number;
+  bookingsTotal: number;
+  revenuePaid: number;
+  bookingsByStatus: Record<string, number>;
+  topTours: { tourId: number; tourName: string; sold: number }[];
+}
+
+// B2: khớp AuditLogDto BE.
+export interface AuditLog {
+  id: number;
+  actorId: number | null;
+  actorUsername: string;
+  action: string;
+  entityType: string;
+  entityId: number;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+}
+
+// Khớp SupportRequestDto BE (public gửi, admin xử lý New -> InProgress -> Resolved).
+export interface SupportRequest {
+  id: number;
+  userId: number | null;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  status: string;
+  adminNote: string | null;
+  handledBy: number | null;
+  handledAt: string | null;
+  createdAt: string;
 }

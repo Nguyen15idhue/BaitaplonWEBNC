@@ -15,6 +15,14 @@ public class TourListDto
     public decimal PriceFrom { get; set; }
     public DestinationBriefDto? Destination { get; set; }
     public string Status { get; set; } = string.Empty;
+    public int MaxSeats { get; set; }
+    public int BookedSeats { get; set; }
+    public int AvailableSeats { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public DateTime? DepartureDate { get; set; }
+    public string? DepartureLocation { get; set; }
+    public string? Duration { get; set; }
 }
 
 public class PriceDto
@@ -36,13 +44,23 @@ public class ImageDto
 public class TourDetailDto : TourListDto
 {
     public string Description { get; set; } = string.Empty;
-    public int MaxSeats { get; set; }
     public int DestinationId { get; set; }
     public List<ImageDto> Images { get; set; } = new();
     public List<PriceDto> Prices { get; set; } = new();
-    public DateTime? DepartureDate { get; set; }
-    public string? DepartureLocation { get; set; }
-    public string? Duration { get; set; }
+    // Nội dung chi tiết tour (null = chưa nhập).
+    public string? Route { get; set; }
+    public string? Itinerary { get; set; }
+    public string? Transport { get; set; }
+    public string? Accommodation { get; set; }
+    public string? Meals { get; set; }
+    public string? Sightseeing { get; set; }
+    public string? Guide { get; set; }
+    public string? Included { get; set; }
+    public string? Excluded { get; set; }
+    public string? Audience { get; set; }
+    public string? Insurance { get; set; }
+    public string? Terms { get; set; }
+    public string? ContactInfo { get; set; }
 }
 
 public class CreateTourRequest
@@ -52,9 +70,24 @@ public class CreateTourRequest
     public int DestinationId { get; set; }
     public int MaxSeats { get; set; }
     public string Status { get; set; } = "Draft";
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
     public DateTime? DepartureDate { get; set; }
     public string? DepartureLocation { get; set; }
     public string? Duration { get; set; }
+    public string? Route { get; set; }
+    public string? Itinerary { get; set; }
+    public string? Transport { get; set; }
+    public string? Accommodation { get; set; }
+    public string? Meals { get; set; }
+    public string? Sightseeing { get; set; }
+    public string? Guide { get; set; }
+    public string? Included { get; set; }
+    public string? Excluded { get; set; }
+    public string? Audience { get; set; }
+    public string? Insurance { get; set; }
+    public string? Terms { get; set; }
+    public string? ContactInfo { get; set; }
 }
 
 public class UpdateTourRequest : CreateTourRequest

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { cancelBooking, getBooking, getMyBookings } from "../services/bookingApi";
+import { cancelBooking, getBooking, getMyBookings, payBooking } from "../services/bookingApi";
 import type { Booking } from "../types";
 import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../components/common/common";
 import { Card, Badge } from "../components/ui/card";
@@ -73,6 +73,17 @@ export function MyBookings() {
 
   const canCancel = (b: Booking) => b.status !== "Completed" && b.status !== "Cancelled";
 
+  async function pay(id: number) {
+    try {
+      const updated = await payBooking(id);
+      push("Thanh toán thành công.", "success");
+      setDetail(updated);
+      load(page, status);
+    } catch (err) {
+      toastForApiError(push, err);
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Chuyến của tôi" />
@@ -117,6 +128,11 @@ export function MyBookings() {
                   <Button variant="outline" onClick={() => openDetail(b.id)}>
                     Chi tiết
                   </Button>
+                  {b.status === "PendingPayment" && (
+                    <Button onClick={() => pay(b.id)}>
+                      Thanh toán
+                    </Button>
+                  )}
                   {canCancel(b) && (
                     <Button variant="danger" onClick={() => setCancelling(b)}>
                       Hủy
@@ -139,11 +155,11 @@ export function MyBookings() {
               Trạng thái: <Badge tone={bookingTone(detail.status)}>{label(BOOKING_STATUS_LABEL, detail.status)}</Badge>
             </p>
             <h3 className="mt-2 font-semibold">Lịch trình:</h3>
-            {detail.tracking.length === 0 ? (
+            {(detail.tracking ?? []).length === 0 ? (
               <EmptyState message="Chưa có mốc tracking." />
             ) : (
               <ul className="flex flex-col gap-1">
-                {detail.tracking.map((t, i) => (
+                {(detail.tracking ?? []).map((t, i) => (
                   <li key={i} className="text-[#64748B]">
                     <Badge tone="muted">{label(BOOKING_STATUS_LABEL, t.status)}</Badge> {new Date(t.at).toLocaleString("vi-VN")} · bởi {t.by}
                     {t.note ? ` · ${t.note}` : ""}

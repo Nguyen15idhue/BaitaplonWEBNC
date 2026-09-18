@@ -12,14 +12,20 @@ public class JwtHelper
 {
     public const int AccessMinutes = 15;
     public const int RefreshDays = 7;
+    public const string Issuer = "travela-api";
+    public const string Audience = "travela-web";
 
     private readonly string _secret;
+    private readonly string _issuer;
+    private readonly string _audience;
 
     public JwtHelper(IConfiguration config)
     {
         _secret = config["JWT_SECRET"]
             ?? config["Jwt:Secret"]
             ?? "dev-only-secret-change-me-min-32-chars!!";
+        _issuer = config["Jwt:Issuer"] ?? Issuer;
+        _audience = config["Jwt:Audience"] ?? Audience;
     }
 
     public string CreateAccessToken(int userId, string username, string role)
@@ -32,6 +38,8 @@ public class JwtHelper
             new Claim(ClaimTypes.Role, role),
         };
         var token = new JwtSecurityToken(
+            issuer: _issuer,
+            audience: _audience,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(AccessMinutes),
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));

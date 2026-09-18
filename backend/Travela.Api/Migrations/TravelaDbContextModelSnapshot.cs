@@ -280,6 +280,70 @@ namespace Travela.Api.Migrations
                     b.ToTable("refresh_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Travela.Api.Models.SupportRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AdminNote")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime?>("HandledAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("HandledBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("HandledBy");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("support_requests", (string)null);
+                });
+
             modelBuilder.Entity("Travela.Api.Models.Tour", b =>
                 {
                     b.Property<int>("Id")
@@ -307,6 +371,51 @@ namespace Travela.Api.Migrations
                     b.Property<string>("Duration")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Accommodation")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Audience")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("ContactInfo")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Excluded")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Guide")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Included")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Insurance")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Itinerary")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Meals")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Sightseeing")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Terms")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Transport")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
                     b.Property<int>("MaxSeats")
                         .HasColumnType("int");
 
@@ -314,6 +423,12 @@ namespace Travela.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("TourName")
                         .IsRequired()
@@ -446,6 +561,23 @@ namespace Travela.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Travela.Api.Models.SupportRequest", b =>
+                {
+                    b.HasOne("Travela.Api.Models.User", "Handler")
+                        .WithMany()
+                        .HasForeignKey("HandledBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Travela.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Handler");
 
                     b.Navigation("User");
                 });

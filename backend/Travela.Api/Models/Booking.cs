@@ -11,6 +11,8 @@ public class Booking
     public string Status { get; set; } = "PendingPayment";
     public string TrackingTrace { get; set; } = "[]";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // M12: optimistic concurrency cho state machine (tăng mỗi lần đổi trạng thái).
+    public long Version { get; set; }
 
     public User? User { get; set; }
     public Tour? Tour { get; set; }

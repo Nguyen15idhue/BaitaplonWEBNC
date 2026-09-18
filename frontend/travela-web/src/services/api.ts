@@ -18,6 +18,7 @@ api.interceptors.request.use((config) => {
 // F1b: 401 -> refresh 1 lần rồi retry request gốc; fail -> xóa session, về /login.
 // Không tự refresh lại chính /auth/login, /auth/register, /auth/refresh.
 let refreshing: Promise<string> | null = null;
+let redirecting = false;
 
 function doRefresh(): Promise<string> {
   if (!refreshing) {
@@ -36,6 +37,17 @@ function doRefresh(): Promise<string> {
   return refreshing;
 }
 
+function redirectLoginOnce() {
+  // N14: guard redirect 1 lần, tránh redirect-storm khi nhiều request cùng 401.
+  if (redirecting) return;
+  redirecting = true;
+  clearSession();
+  if (window.location.pathname !== "/login") window.location.href = "/login";
+  setTimeout(() => {
+    redirecting = false;
+  }, 3000);
+}
+
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -47,11 +59,12 @@ api.interceptors.response.use(
       original._retry = true;
       try {
         const token = await doRefresh();
+        // N14: headers có thể undefined ở retry — đảm bảo object trước khi gán.
+        original.headers = original.headers ?? {};
         original.headers.Authorization = `Bearer ${token}`;
         return api(original);
       } catch {
-        clearSession();
-        if (window.location.pathname !== "/login") window.location.href = "/login";
+        redirectLoginOnce();
       }
     }
     return Promise.reject(error);

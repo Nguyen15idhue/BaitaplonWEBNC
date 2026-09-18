@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Travela.Api.DTOs.Tour;
@@ -9,7 +7,7 @@ namespace Travela.Api.Controllers;
 
 // Prices: đọc public theo tour, ghi Admin. Mọi đổi giá ghi audit trong Service.
 [ApiController]
-public class PricesController : ControllerBase
+public class PricesController : BaseApiController
 {
     private readonly TourService _tours;
 
@@ -22,7 +20,8 @@ public class PricesController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ListByTour(int tourId)
     {
-        return Ok(await _tours.ListPricesAsync(tourId));
+        var publicOnly = !User.IsInRole("Admin");
+        return Ok(await _tours.ListPricesAsync(tourId, publicOnly));
     }
 
     [HttpPost("api/tours/{tourId:int}/prices")]
@@ -45,13 +44,5 @@ public class PricesController : ControllerBase
     {
         await _tours.DeletePriceAsync(id, CurrentUserId());
         return Ok(new { message = "Đã xóa giá." });
-    }
-
-    private int CurrentUserId()
-    {
-        var sub = User.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new Middleware.AppException(System.Net.HttpStatusCode.Unauthorized, "UNAUTHORIZED", "Phiên không hợp lệ.");
-        return int.Parse(sub);
     }
 }

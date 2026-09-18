@@ -8,7 +8,7 @@ namespace Travela.Api.Controllers;
 // Destinations: đọc public, ghi Admin.
 [ApiController]
 [Route("api/destinations")]
-public class DestinationsController : ControllerBase
+public class DestinationsController : BaseApiController
 {
     private readonly DestinationService _destinations;
 
@@ -35,21 +35,21 @@ public class DestinationsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] CreateDestinationRequest req)
     {
-        return StatusCode(201, await _destinations.CreateAsync(req));
+        return StatusCode(201, await _destinations.CreateAsync(req, CurrentUserId()));
     }
 
     [HttpPut("{id:int}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, [FromBody] CreateDestinationRequest req)
     {
-        return Ok(await _destinations.UpdateAsync(id, req));
+        return Ok(await _destinations.UpdateAsync(id, req, CurrentUserId()));
     }
 
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
-        await _destinations.DeleteAsync(id);
+        await _destinations.DeleteAsync(id, CurrentUserId());
         return Ok(new { message = "Đã xóa điểm đến." });
     }
 }
