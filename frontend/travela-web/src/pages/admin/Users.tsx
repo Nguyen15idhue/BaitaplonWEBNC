@@ -18,16 +18,21 @@ export function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [role, setRole] = useState("");
+  const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [locking, setLocking] = useState<User | null>(null);
   const [pendingRole, setPendingRole] = useState<{ u: User; role: "Admin" | "Customer" } | null>(null);
   const pageSize = 12;
 
-  async function load(p: number, s: string) {
+  async function load(p: number, s: string, r = role, st = status) {
     setLoading(true);
     setError("");
     try {
-      const res = await listUsers({ search: s || undefined, page: p, pageSize });
+      const res = await listUsers({
+        search: s || undefined, role: r || undefined, status: st || undefined,
+        page: p, pageSize,
+      });
       setItems(res.items);
       setTotal(res.total);
       setPage(res.page);
@@ -86,6 +91,22 @@ export function AdminUsers() {
                   if (e.key === "Enter") load(1, search);
                 }}
               />
+            </Field>
+          </div>
+          <div className="flex items-end gap-2">
+            <Field label="Quyền">
+              <Select value={role} onChange={(e) => { setRole(e.target.value); load(1, search, e.target.value, status); }}>
+                <option value="">Tất cả</option>
+                <option value="Admin">Admin</option>
+                <option value="Customer">Customer</option>
+              </Select>
+            </Field>
+            <Field label="Trạng thái">
+              <Select value={status} onChange={(e) => { setStatus(e.target.value); load(1, search, role, e.target.value); }}>
+                <option value="">Tất cả</option>
+                <option value="Active">Active</option>
+                <option value="Locked">Locked</option>
+              </Select>
             </Field>
           </div>
           <Button onClick={() => load(1, search)}>Tìm</Button>

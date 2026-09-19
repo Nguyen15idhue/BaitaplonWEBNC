@@ -1,6 +1,104 @@
-@Travela.Api_HostAddress = http://localhost:5099
+@host = http://localhost:5000
+@access = PASTE_ACCESS_TOKEN
+@refresh = PASTE_REFRESH_TOKEN
 
-GET {{Travela.Api_HostAddress}}/weatherforecast/
+### Health (DB up -> 200, down -> 503)
+GET {{host}}/health
 Accept: application/json
+
+### Liveness
+GET {{host}}/health/live
+Accept: application/json
+
+### Register
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "demo1",
+  "email": "demo1@travela.local",
+  "password": "Demo12345"
+}
+
+### Login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "admin",
+  "password": "Admin123!"
+}
+
+### Me
+GET {{host}}/api/auth/me
+Authorization: Bearer {{access}}
+Accept: application/json
+
+### Refresh
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh}}"
+}
+
+### Public tours
+GET {{host}}/api/tours?page=1&pageSize=12
+Accept: application/json
+
+### Tour detail (kèm nội dung chi tiết + images + prices)
+GET {{host}}/api/tours/2
+Accept: application/json
+
+### Upload ảnh tour (multipart, Admin; thay file path thật khi test)
+# POST {{host}}/api/tours/2/images/upload
+# Authorization: Bearer {{access}}
+# Content-Type: multipart/form-data; boundary=----travela
+#
+# ------travela
+# Content-Disposition: form-data; name="caption"
+#
+# Bãi biển Titop
+# ------travela
+# Content-Disposition: form-data; name="sortOrder"
+#
+# 1
+# ------travela
+# Content-Disposition: form-data; name="file"; filename="halong.jpg"
+# Content-Type: image/jpeg
+#
+# < ./halong.jpg
+# ------travela--
+
+### Admin stats
+GET {{host}}/api/admin/stats
+Authorization: Bearer {{access}}
+Accept: application/json
+
+### Create booking (Mock only)
+POST {{host}}/api/bookings
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "tourId": 1,
+  "quantity": 2,
+  "paymentMethod": "Mock"
+}
+
+### Pay pending booking
+POST {{host}}/api/bookings/1/pay
+Authorization: Bearer {{access}}
+Accept: application/json
+
+### Admin update status
+PUT {{host}}/api/bookings/1/status
+Authorization: Bearer {{access}}
+Content-Type: application/json
+
+{
+  "status": "Confirmed",
+  "note": "Admin xác nhận"
+}
 
 ###

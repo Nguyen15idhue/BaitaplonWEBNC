@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
+import { getAdminStats } from "../../services/statsApi";
 import { adminListBookings } from "../../services/bookingApi";
-import { getTours } from "../../services/tourApi";
-import { listUsers } from "../../services/userApi";
 import type { Booking } from "../../types";
 import { Loading, ErrorState, PageHeader } from "../../components/common/common";
 import { Card, Badge } from "../../components/ui/card";
@@ -9,7 +8,7 @@ import { Table } from "../../components/ui/table";
 import { formatVND, bookingTone } from "../../lib/format";
 import { label, BOOKING_STATUS_LABEL } from "../../lib/labels";
 
-// Dashboard: tận dụng GET /bookings + /tours + /users, không cần API thống kê riêng.
+// Dashboard: số liệu từ GET /admin/stats (aggregate DB) + 5 đơn mới nhất.
 export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -20,12 +19,13 @@ export function Dashboard() {
   const [latest, setLatest] = useState<Booking[]>([]);
 
   useEffect(() => {
-    Promise.all([getTours({ page: 1, pageSize: 1 }), listUsers({ page: 1, pageSize: 1 }), adminListBookings(undefined, 1, 50)])
-      .then(([t, u, b]) => {
-        setToursTotal(t.total);
-        setUsersTotal(u.total);
-        setBookingsTotal(b.total);
-        setRevenue(b.items.filter((x) => x.checkout?.status === "Paid").reduce((s, x) => s + (x.checkout?.amount ?? 0), 0));
+    // C07: doanh thu/tổng từ stats (đúng cả khi >50 booking); latest lấy page 1 x 5.
+    Promise.all([getAdminStats(), adminListBookings(undefined, 1, 5)])
+      .then(([s, b]) => {
+        setToursTotal(s.toursTotal);
+        setUsersTotal(s.usersTotal);
+        setBookingsTotal(s.bookingsTotal);
+        setRevenue(s.revenuePaid);
         setLatest(b.items.slice(0, 5));
       })
       .catch(() => setError("Không tải được dashboard."))

@@ -15,12 +15,20 @@ public class TourService
 {
     private readonly TravelaDbContext _db;
     private readonly AuditLogService _audit;
+    private readonly IWebHostEnvironment _env;
     private static readonly string[] ValidStatus = ["Draft", "Published", "Hidden"];
+    private const long MaxUploadBytes = 5 * 1024 * 1024; // 5MB
+    private static readonly Dictionary<string, string> UploadExts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".jpg"] = "jpeg", [".jpeg"] = "jpeg", [".png"] = "png",
+        [".webp"] = "webp", [".gif"] = "gif",
+    };
 
-    public TourService(TravelaDbContext db, AuditLogService audit)
+    public TourService(TravelaDbContext db, AuditLogService audit, IWebHostEnvironment env)
     {
         _db = db;
         _audit = audit;
+        _env = env;
     }
 
     public async Task<PagedResult<TourListDto>> ListAsync(
@@ -33,6 +41,7 @@ public class TourService
             .Include(t => t.Destination)
             .Include(t => t.Prices)
             .Include(t => t.Images)
+            .Include(t => t.Bookings)
             .AsQueryable();
         if (publicOnly) q = q.Where(t => t.Status == "Published");
         if (!string.IsNullOrWhiteSpace(status)) q = q.Where(t => t.Status == status);
@@ -57,7 +66,7 @@ public class TourService
     public async Task<TourDetailDto> GetDetailAsync(int id, bool publicOnly)
     {
         var t = await _db.Tours.AsNoTracking()
-            .Include(x => x.Destination).Include(x => x.Prices).Include(x => x.Images)
+            .Include(x => x.Destination).Include(x => x.Prices).Include(x => x.Images).Include(x => x.Bookings)
             .FirstOrDefaultAsync(x => x.Id == id)
             ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy tour.");
         if (publicOnly && t.Status != "Published")
@@ -73,8 +82,16 @@ public class TourService
         {
             TourName = req.TourName.Trim(), Description = req.Description?.Trim() ?? string.Empty,
             DestinationId = req.DestinationId, MaxSeats = req.MaxSeats, Status = req.Status,
+            StartDate = req.StartDate, EndDate = req.EndDate,
             DepartureDate = req.DepartureDate, DepartureLocation = req.DepartureLocation?.Trim(),
             Duration = req.Duration?.Trim(),
+            Route = Norm(req.Route), Itinerary = Norm(req.Itinerary),
+            Transport = Norm(req.Transport), Accommodation = Norm(req.Accommodation),
+            Meals = Norm(req.Meals), Sightseeing = Norm(req.Sightseeing),
+            Guide = Norm(req.Guide), Included = Norm(req.Included),
+            Excluded = Norm(req.Excluded), Audience = Norm(req.Audience),
+            Insurance = Norm(req.Insurance), Terms = Norm(req.Terms),
+            ContactInfo = Norm(req.ContactInfo),
             CreatedAt = DateTime.UtcNow
         };
         _db.Tours.Add(t);
@@ -89,15 +106,30 @@ public class TourService
         await RequireDestinationAsync(req.DestinationId);
         var t = await _db.Tours.FindAsync(id)
             ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy tour.");
+        // N05: không cho hạ MaxSeats dưới số đã bán (trừ Cancelled).
+        var sold = await _db.Bookings.Where(b => b.TourId == id && b.Status != "Cancelled")
+            .SumAsync(b => (int?)b.Quantity) ?? 0;
+        if (req.MaxSeats < sold)
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "SEATS_BELOW_SOLD",
+                $"Tour đã bán {sold} chỗ, không thể hạ xuống {req.MaxSeats}.");
         var old = $"{t.TourName}|{t.Status}";
         t.TourName = req.TourName.Trim();
         t.Description = req.Description?.Trim() ?? string.Empty;
         t.DestinationId = req.DestinationId;
         t.MaxSeats = req.MaxSeats;
         t.Status = req.Status;
+        t.StartDate = req.StartDate;
+        t.EndDate = req.EndDate;
         t.DepartureDate = req.DepartureDate;
         t.DepartureLocation = req.DepartureLocation?.Trim();
         t.Duration = req.Duration?.Trim();
+        t.Route = Norm(req.Route); t.Itinerary = Norm(req.Itinerary);
+        t.Transport = Norm(req.Transport); t.Accommodation = Norm(req.Accommodation);
+        t.Meals = Norm(req.Meals); t.Sightseeing = Norm(req.Sightseeing);
+        t.Guide = Norm(req.Guide); t.Included = Norm(req.Included);
+        t.Excluded = Norm(req.Excluded); t.Audience = Norm(req.Audience);
+        t.Insurance = Norm(req.Insurance); t.Terms = Norm(req.Terms);
+        t.ContactInfo = Norm(req.ContactInfo);
         await _db.SaveChangesAsync();
         await _audit.LogAsync(actorId, "Tour.Update", "Tour", id, old, $"{t.TourName}|{t.Status}");
         return await GetDetailAsync(id, publicOnly: false);
@@ -105,33 +137,66 @@ public class TourService
 
     public async Task<object> DeleteAsync(int id, int actorId)
     {
-        var t = await _db.Tours.Include(x => x.Prices).Include(x => x.Images).FirstOrDefaultAsync(x => x.Id == id)
-            ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy tour.");
-        // Có booking thì không xóa cứng: chuyển Hidden (FK Restrict cũng chặn).
-        if (await _db.Bookings.AnyAsync(b => b.TourId == id))
+        // N04: check + delete/hide + audit trong 1 transaction, chống race orphan/FK 500.
+        await using var tx = await _db.Database.BeginTransactionAsync();
+        try
         {
-            var old = t.Status;
-            t.Status = "Hidden";
+            var t = await _db.Tours.Include(x => x.Prices).Include(x => x.Images).FirstOrDefaultAsync(x => x.Id == id)
+                ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy tour.");
+            // Có booking thì không xóa cứng: chuyển Hidden (FK Restrict cũng chặn).
+            if (await _db.Bookings.AnyAsync(b => b.TourId == id))
+            {
+                var old = t.Status;
+                t.Status = "Hidden";
+                _audit.Add(actorId, "Tour.Update", "Tour", id, old, "Hidden");
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
+                return new { hidden = true, message = "Tour đã có booking nên chuyển sang Hidden thay vì xóa." };
+            }
+            _db.Prices.RemoveRange(t.Prices);
+            _db.Images.RemoveRange(t.Images);
+            _db.Tours.Remove(t);
+            _audit.Add(actorId, "Tour.Delete", "Tour", id, t.TourName, null);
             await _db.SaveChangesAsync();
-            await _audit.LogAsync(actorId, "Tour.Update", "Tour", id, old, "Hidden");
-            return new { hidden = true, message = "Tour đã có booking nên chuyển sang Hidden thay vì xóa." };
+            await tx.CommitAsync();
+            return new { hidden = false, message = "Đã xóa tour." };
         }
-        _db.Prices.RemoveRange(t.Prices);
-        _db.Images.RemoveRange(t.Images);
-        _db.Tours.Remove(t);
-        await _db.SaveChangesAsync();
-        await _audit.LogAsync(actorId, "Tour.Delete", "Tour", id, t.TourName, null);
-        return new { hidden = false, message = "Đã xóa tour." };
+        catch (DbUpdateException ex) when (IsFkViolation(ex))
+        {
+            await tx.RollbackAsync();
+            throw new AppException(HttpStatusCode.Conflict, "HAS_BOOKINGS",
+                "Tour đã có booking, không thể xóa.");
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
     }
 
-    public async Task<List<PriceDto>> ListPricesAsync(int tourId)
+    private static bool IsFkViolation(Exception ex)
     {
-        await RequireTourAsync(tourId);
+        for (var e = ex; e is not null; e = e.InnerException)
+        {
+            if (e is MySqlConnector.MySqlException mysql && mysql.Number == 1451)
+                return true;
+        }
+        return false;
+    }
+
+    public async Task<List<PriceDto>> ListPricesAsync(int tourId, bool publicOnly = false)
+    {
+        var tour = await _db.Tours.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tourId)
+            ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy tour.");
+        if (publicOnly && tour.Status != "Published")
+            throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy tour.");
         var now = DateTime.UtcNow;
-        return await _db.Prices.AsNoTracking().Where(p => p.TourId == tourId && p.EffectiveDate <= now)
+        // H05: chỉ trả giá hiệu lực mới nhất từng nguồn (đồng nhất với detail/checkout).
+        var all = await _db.Prices.AsNoTracking().Where(p => p.TourId == tourId && p.EffectiveDate <= now).ToListAsync();
+        return PricingHelper.EffectivePrices(all, now)
             .OrderByDescending(p => p.EffectiveDate)
             .Select(p => new PriceDto { Id = p.Id, SourceName = p.SourceName, PriceValue = p.PriceValue, EffectiveDate = p.EffectiveDate })
-            .ToListAsync();
+            .ToList();
     }
 
     public async Task<PriceDto> CreatePriceAsync(int tourId, CreatePriceRequest req, int actorId)
@@ -140,7 +205,8 @@ public class TourService
         ValidatePrice(req);
         var p = new Price
         {
-            TourId = tourId, SourceName = req.SourceName.Trim(), PriceValue = req.PriceValue,
+            // M02: canonical source để Website/website không thành 2 nguồn.
+            TourId = tourId, SourceName = req.SourceName.Trim().ToLowerInvariant(), PriceValue = req.PriceValue,
             EffectiveDate = req.EffectiveDate, CreatedAt = DateTime.UtcNow
         };
         _db.Prices.Add(p);
@@ -155,7 +221,7 @@ public class TourService
         var p = await _db.Prices.FindAsync(id)
             ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy giá.");
         var old = $"{p.SourceName}:{p.PriceValue}";
-        p.SourceName = req.SourceName.Trim();
+        p.SourceName = req.SourceName.Trim().ToLowerInvariant();
         p.PriceValue = req.PriceValue;
         p.EffectiveDate = req.EffectiveDate;
         await _db.SaveChangesAsync();
@@ -172,31 +238,101 @@ public class TourService
         await _audit.LogAsync(actorId, "Price.Delete", "Price", id, $"{p.SourceName}:{p.PriceValue}", null);
     }
 
-    public async Task<ImageDto> CreateImageAsync(int tourId, CreateImageRequest req)
+    public async Task<ImageDto> CreateImageAsync(int tourId, CreateImageRequest req, int actorId = 0)
     {
         await RequireTourAsync(tourId);
         if (string.IsNullOrWhiteSpace(req.ImageUrl) || req.ImageUrl.Trim().Length > 500 ||
             !Uri.TryCreate(req.ImageUrl.Trim(), UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "image_url phải là URL http/https, tối đa 500 ký tự.");
+        await ValidateImageSlotAsync(tourId, req.Caption, req.SortOrder);
+        return await AddImageAsync(tourId, req.ImageUrl.Trim(), req.Caption, req.SortOrder, actorId);
+    }
+
+    // Upload file ảnh song song với cơ chế link URL: file lưu wwwroot/uploads, DB chỉ giữ path tương đối.
+    public async Task<ImageDto> UploadImageAsync(int tourId, IFormFile? file, string? caption, int sortOrder, int actorId)
+    {
+        await RequireTourAsync(tourId);
+        if (file is null || file.Length == 0)
+            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Chọn file ảnh để tải lên.");
+        if (file.Length > MaxUploadBytes)
+            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "File ảnh tối đa 5MB.");
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!UploadExts.ContainsKey(ext) || !(file.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true))
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "File phải là ảnh jpg/png/webp/gif.");
+        await ValidateImageSlotAsync(tourId, caption, sortOrder);
+
+        byte[] head = new byte[12];
+        await using (var rs = file.OpenReadStream())
+            await rs.ReadExactlyAsync(head, 0, (int)Math.Min(head.Length, file.Length));
+        if (!IsImageMagic(head, UploadExts[ext]))
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "Nội dung file không phải ảnh hợp lệ.");
+
+        var dir = Path.Combine(_env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"),
+            "uploads", "tours", tourId.ToString());
+        Directory.CreateDirectory(dir);
+        var fileName = $"{Guid.NewGuid():N}{ext}";
+        await using (var fs = new FileStream(Path.Combine(dir, fileName), FileMode.CreateNew))
+            await file.CopyToAsync(fs);
+        return await AddImageAsync(tourId, $"/uploads/tours/{tourId}/{fileName}", caption, sortOrder, actorId);
+    }
+
+    private async Task ValidateImageSlotAsync(int tourId, string? caption, int sortOrder)
+    {
         if (await _db.Images.CountAsync(i => i.TourId == tourId) >= 10)
             throw new AppException(HttpStatusCode.BadRequest, "TOO_MANY_IMAGES", "Mỗi tour tối đa 10 ảnh.");
+        // M03: validate sort/caption ở server, không chỉ client.
+        if (sortOrder <= 0)
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "SortOrder phải lớn hơn 0.");
+        if ((caption?.Length ?? 0) > 300)
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "Caption tối đa 300 ký tự.");
+    }
+
+    private async Task<ImageDto> AddImageAsync(int tourId, string imageUrl, string? caption, int sortOrder, int actorId)
+    {
         var img = new Image
         {
-            TourId = tourId, ImageUrl = req.ImageUrl.Trim(),
-            Caption = req.Caption?.Trim() ?? string.Empty, SortOrder = req.SortOrder
+            TourId = tourId, ImageUrl = imageUrl,
+            Caption = caption?.Trim() ?? string.Empty, SortOrder = sortOrder
         };
         _db.Images.Add(img);
         await _db.SaveChangesAsync();
+        // M08: audit cả Image để đủ vết admin.
+        if (actorId != 0)
+            await _audit.LogAsync(actorId, "Image.Create", "Image", img.Id, null, img.ImageUrl);
         return ToImageDto(img);
     }
 
-    public async Task DeleteImageAsync(int id)
+    private static bool IsImageMagic(byte[] h, string kind) => kind switch
+    {
+        "jpeg" => h.Length >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF,
+        "png" => h.Length >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47,
+        "gif" => h.Length >= 4 && h[0] == 0x47 && h[1] == 0x49 && h[2] == 0x46 && h[3] == 0x38,
+        "webp" => h.Length >= 12 && h[0] == 0x52 && h[1] == 0x49 && h[2] == 0x46 && h[3] == 0x46
+            && h[8] == 0x57 && h[9] == 0x45 && h[10] == 0x42 && h[11] == 0x50,
+        _ => false,
+    };
+
+    public async Task DeleteImageAsync(int id, int actorId = 0)
     {
         var img = await _db.Images.FindAsync(id)
             ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy ảnh.");
+        var old = img.ImageUrl;
         _db.Images.Remove(img);
         await _db.SaveChangesAsync();
+        // Ảnh upload thì xóa cả file vật lý (best-effort, lỗi thì bỏ qua).
+        if (old.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var path = Path.Combine(_env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"),
+                    old.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch { /* bỏ qua: DB đã xóa là đủ */ }
+        }
+        if (actorId != 0)
+            await _audit.LogAsync(actorId, "Image.Delete", "Image", id, old, null);
     }
 
     private async Task RequireTourAsync(int tourId)
@@ -219,7 +355,28 @@ public class TourService
             throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Số chỗ phải lớn hơn 0.");
         if (!ValidStatus.Contains(req.Status))
             throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Trạng thái chỉ nhận Draft, Published hoặc Hidden.");
+        // A4: ngày đi phải hợp lệ (Start < End).
+        if (req.StartDate.HasValue && req.EndDate.HasValue && req.StartDate.Value >= req.EndDate.Value)
+            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Ngày bắt đầu phải trước ngày kết thúc.");
+        // Nội dung chi tiết: field ngắn tối đa 500, nội dung dài tối đa 10000 ký tự.
+        foreach (var (name, value) in new (string, string?)[]
+        {
+            ("route", req.Route), ("transport", req.Transport), ("accommodation", req.Accommodation),
+            ("guide", req.Guide), ("audience", req.Audience), ("contactInfo", req.ContactInfo),
+        })
+            if ((value?.Length ?? 0) > 500)
+                throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", $"{name} tối đa 500 ký tự.");
+        foreach (var (name, value) in new (string, string?)[]
+        {
+            ("itinerary", req.Itinerary), ("meals", req.Meals), ("sightseeing", req.Sightseeing),
+            ("included", req.Included), ("excluded", req.Excluded),
+            ("insurance", req.Insurance), ("terms", req.Terms),
+        })
+            if ((value?.Length ?? 0) > 10000)
+                throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", $"{name} tối đa 10000 ký tự.");
     }
+
+    private static string? Norm(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private static void ValidatePrice(CreatePriceRequest req)
     {
@@ -233,7 +390,9 @@ public class TourService
 
     private static TourListDto BuildListDto(Tour t, DateTime now)
     {
-        var effective = EffectivePrices(t, now);
+        var effective = PricingHelper.EffectivePrices(t.Prices, now);
+        // B1/M01: lifetime capacity — Completed vẫn chiếm chỗ, chỉ trừ Cancelled.
+        var booked = t.Bookings.Where(b => b.Status != "Cancelled").Sum(b => b.Quantity);
         return new TourListDto
         {
             Id = t.Id,
@@ -241,7 +400,15 @@ public class TourService
             Thumbnail = t.Images.OrderBy(i => i.SortOrder).FirstOrDefault()?.ImageUrl ?? string.Empty,
             PriceFrom = effective.Count == 0 ? 0 : effective.Min(p => p.PriceValue),
             Destination = t.Destination is null ? null : new DestinationBriefDto { Id = t.Destination.Id, Name = t.Destination.Name, RegionName = t.Destination.RegionName },
-            Status = t.Status
+            Status = t.Status,
+            MaxSeats = t.MaxSeats,
+            BookedSeats = booked,
+            AvailableSeats = Math.Max(0, t.MaxSeats - booked),
+            StartDate = t.StartDate,
+            EndDate = t.EndDate,
+            DepartureDate = t.DepartureDate,
+            DepartureLocation = t.DepartureLocation,
+            Duration = t.Duration
         };
     }
 
@@ -252,19 +419,19 @@ public class TourService
         {
             Id = list.Id, TourName = list.TourName, Thumbnail = list.Thumbnail, PriceFrom = list.PriceFrom,
             Destination = list.Destination, Status = list.Status,
-            Description = t.Description, MaxSeats = t.MaxSeats, DestinationId = t.DestinationId,
+            MaxSeats = list.MaxSeats, BookedSeats = list.BookedSeats, AvailableSeats = list.AvailableSeats,
+            StartDate = list.StartDate, EndDate = list.EndDate,
             DepartureDate = t.DepartureDate, DepartureLocation = t.DepartureLocation, Duration = t.Duration,
+            Description = t.Description, DestinationId = t.DestinationId,
+            Route = t.Route, Itinerary = t.Itinerary,
+            Transport = t.Transport, Accommodation = t.Accommodation,
+            Meals = t.Meals, Sightseeing = t.Sightseeing,
+            Guide = t.Guide, Included = t.Included, Excluded = t.Excluded,
+            Audience = t.Audience, Insurance = t.Insurance,
+            Terms = t.Terms, ContactInfo = t.ContactInfo,
             Images = t.Images.OrderBy(i => i.SortOrder).Select(ToImageDto).ToList(),
-            Prices = EffectivePrices(t, now).OrderByDescending(p => p.EffectiveDate).Select(ToPriceDto).ToList()
+            Prices = PricingHelper.EffectivePrices(t.Prices, now).OrderByDescending(p => p.EffectiveDate).Select(ToPriceDto).ToList()
         };
-    }
-
-    private static List<Price> EffectivePrices(Tour t, DateTime now)
-    {
-        return t.Prices.Where(p => p.EffectiveDate <= now)
-            .GroupBy(p => p.SourceName)
-            .Select(g => g.OrderByDescending(p => p.EffectiveDate).First())
-            .ToList();
     }
 
     private static PriceDto ToPriceDto(Price p) => new()

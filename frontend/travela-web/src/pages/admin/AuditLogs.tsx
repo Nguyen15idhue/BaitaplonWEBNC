@@ -101,10 +101,11 @@ export function AuditLogs() {
         <EmptyState message="Chưa có lịch sử nào khớp điều kiện lọc." />
       ) : (
         <>
-          <Table headers={["ID", "Hành động", "Đối tượng", "ID", "Cũ → Mới", "Lúc"]}>
+          <Table headers={["ID", "Người làm", "Hành động", "Đối tượng", "ID", "Cũ → Mới", "Lúc"]}>
             {items.map((a) => (
               <tr key={a.id} className="border-b border-[#E2E8F0]">
                 <td className="px-4 py-2">{a.id}</td>
+                <td className="px-4 py-2">{a.actorUsername ?? a.actorId ?? "system"}</td>
                 <td className="px-4 py-2">{label(AUDIT_ACTION_LABEL, a.action)}</td>
                 <td className="px-4 py-2">{a.entityType}</td>
                 <td className="px-4 py-2">{a.entityId}</td>

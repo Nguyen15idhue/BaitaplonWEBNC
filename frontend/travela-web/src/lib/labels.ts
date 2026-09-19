@@ -25,6 +25,12 @@ export const USER_STATUS_LABEL: Record<string, string> = {
   Locked: "Đã khóa",
 };
 
+export const SUPPORT_STATUS_LABEL: Record<string, string> = {
+  New: "Mới",
+  InProgress: "Đang xử lý",
+  Resolved: "Đã xử lý",
+};
+
 export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "User.Lock": "Khóa người dùng",
   "User.Unlock": "Mở khóa người dùng",
@@ -37,6 +43,10 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "Price.Delete": "Xóa giá",
   "Booking.Create": "Tạo đơn",
   "Booking.Status": "Đổi trạng thái đơn",
+  "Image.Create": "Thêm ảnh",
+  "Image.Delete": "Xóa ảnh",
+  "Support.Create": "Gửi yêu cầu hỗ trợ",
+  "Support.Status": "Xử lý yêu cầu hỗ trợ",
 };
 
 export function label(map: Record<string, string>, code: string): string {
