@@ -60,6 +60,18 @@ export interface TourDetail extends Tour {
   insurance: string | null;
   terms: string | null;
   contactInfo: string | null;
+  // Redesign: điều kiện tour chi tiết + lịch trình từng ngày.
+  paymentTerms: string | null;
+  cancellationPolicy: string | null;
+  applicationConditions: string | null;
+  itineraryDays: string | null;
+}
+
+export interface ItineraryDay {
+  day: number;
+  title: string;
+  meals: string;
+  content: string;
 }
 
 export interface TrackingStep {

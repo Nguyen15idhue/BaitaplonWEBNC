@@ -39,6 +39,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    volumes:
+      - backend_uploads:/app/wwwroot/uploads
     ports:
       - "5000:8080"
     logging:
@@ -66,3 +68,4 @@ services:
 
 volumes:
   mysql_data:
+  backend_uploads:

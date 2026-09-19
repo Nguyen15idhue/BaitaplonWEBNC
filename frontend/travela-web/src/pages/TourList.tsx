@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { getTours } from "../services/tourApi";
-import { listDestinations } from "../services/destinationApi";
-import type { Destination, Tour } from "../types";
+import type { Tour } from "../types";
 import { Loading, EmptyState, ErrorState, PageHeader, Pagination } from "../components/common/common";
 import { TourCard } from "../components/common/TourCard";
 import { Input, Select, Field, FieldError } from "../components/ui/fields";
@@ -10,15 +8,12 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 
 export function TourList() {
-  const [searchParams] = useSearchParams();
   const [tours, setTours] = useState<Tour[]>([]);
   const [total, setTotal] = useState(0);
-  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
-  const [destinationId, setDestinationId] = useState(() => searchParams.get("destinationId") ?? "");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [sort, setSort] = useState("");
@@ -26,26 +21,16 @@ export function TourList() {
   const pageSize = 12;
 
   useEffect(() => {
-    listDestinations().then(setDestinations).catch(() => {});
+    load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Deep-link từ trang Destinations: ?destinationId= -> applied + tự load.
-  useEffect(() => {
-    const did = searchParams.get("destinationId") ?? "";
-    setDestinationId(did);
-    setPage(1);
-    loadWith(1, { destinationId: did || undefined });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  async function loadWith(p: number, over?: { destinationId?: string | number }) {
+  async function loadWith(p: number) {
     setLoading(true);
     setError("");
     try {
-      const did = over && "destinationId" in over ? over.destinationId : destinationId ? Number(destinationId) : undefined;
       const res = await getTours({
         search: search || undefined,
-        destinationId: did === "" || did === undefined ? undefined : Number(did),
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
         sort: sort || undefined,
@@ -79,7 +64,6 @@ export function TourList() {
 
   function reset() {
     setSearch("");
-    setDestinationId("");
     setMinPrice("");
     setMaxPrice("");
     setSort("");
@@ -109,16 +93,6 @@ export function TourList() {
         >
           <Field label="Tìm theo tên tour">
             <Input placeholder="VD: Hạ Long" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </Field>
-          <Field label="Điểm đến">
-            <Select value={destinationId} onChange={(e) => setDestinationId(e.target.value)}>
-              <option value="">Tất cả điểm đến</option>
-              {destinations.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.regionName})
-                </option>
-              ))}
-            </Select>
           </Field>
           <Field label="Sắp xếp">
             <Select value={sort} onChange={(e) => setSort(e.target.value)}>

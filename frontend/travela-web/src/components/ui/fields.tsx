@@ -15,12 +15,12 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   );
 }
 
-export function Input({ ref, ...rest }: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
-  return <input ref={ref} {...rest} className={cn(field, rest.className)} />;
+export function Input({ ref, className, ...rest }: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
+  return <input ref={ref} className={cn(field, className)} {...rest} />;
 }
 
-export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn(field, props.className)} {...props} />;
+export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea className={cn(field, className)} {...props} />;
 }
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {

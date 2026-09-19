@@ -4,6 +4,7 @@ import { LogOut, Menu, X, User, Search, ChevronLeft, ChevronRight, Phone, Mail }
 import { useAuth } from "../../lib/auth-context";
 import { cn } from "../../lib/utils";
 import { useSliderImages } from "../../lib/image-store";
+import type { Tour } from "../../types";
 
 function SiteFooter() {
   return (
@@ -14,15 +15,6 @@ function SiteFooter() {
           <p className="text-sm leading-relaxed text-white/80">
             Chúng tôi cam kết mang đến những trải nghiệm du lịch tuyệt vời, khám phá vẻ đẹp thiên nhiên và văn hóa độc đáo của Việt Nam.
           </p>
-        </div>
-
-        <div>
-          <h4 className="mb-3 text-base font-bold text-[#535041]">Vùng miền</h4>
-          <ul className="flex flex-col gap-2 text-sm text-white/80">
-            <li><Link to="/destinations?search=Miền Bắc" className="hover:text-white">Miền Bắc</Link></li>
-            <li><Link to="/destinations?search=Miền Trung" className="hover:text-white">Miền Trung</Link></li>
-            <li><Link to="/destinations?search=Miền Nam" className="hover:text-white">Miền Nam</Link></li>
-          </ul>
         </div>
 
         <div>
@@ -75,7 +67,6 @@ const ADMIN_LINKS = [
   { to: "/admin", label: "Tổng quan" },
   { to: "/admin/users", label: "Người dùng" },
   { to: "/admin/tours", label: "Tour" },
-  { to: "/admin/destinations", label: "Điểm đến" },
   { to: "/admin/bookings", label: "Đơn đặt" },
   { to: "/admin/support-requests", label: "Hỗ trợ" },
   { to: "/admin/audit-logs", label: "Lịch sử" },
@@ -87,6 +78,40 @@ function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Tour[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+        setSearchQuery("");
+        setSearchResults([]);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function handleSearchInput(value: string) {
+    setSearchQuery(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (value.trim().length < 2) { setSearchResults([]); return; }
+    setSearchLoading(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const { getTours } = await import("../../services/tourApi");
+        const res = await getTours({ search: value.trim(), pageSize: 6 });
+        setSearchResults(res.items);
+      } catch { setSearchResults([]); }
+      finally { setSearchLoading(false); }
+    }, 350);
+  }
 
   function navClass(path: string) {
     const active = location.pathname === path || location.pathname.startsWith(path + "/");
@@ -96,7 +121,7 @@ function Header() {
   }
 
   return (
-    <header className="relative">
+    <header className="sticky top-0 z-50">
       {/* Tầng trên — #A79F84 */}
       <div className="flex items-center justify-between bg-[#A79F84] px-6 py-3">
         <Link to="/" className="text-lg font-bold italic text-white">
@@ -121,7 +146,7 @@ function Header() {
                     await logout();
                     navigate("/login");
                   }}
-                  className="hidden items-center gap-1 rounded-full bg-[#535041] px-2.5 py-1.5 text-sm text-white transition-colors hover:bg-[#535041]/90 sm:flex"
+                  className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-[#535041] text-white transition-colors hover:bg-[#535041]/90"
                 >
                   <LogOut size={14} />
                 </button>
@@ -157,9 +182,6 @@ function Header() {
           <Link to="/tours" className={navClass("/tours")}>
             Tour
           </Link>
-          <Link to="/destinations" className={navClass("/destinations")}>
-            Điểm đến
-          </Link>
           <Link to="/my-bookings" className={navClass("/my-bookings")}>
             Chuyến của tôi
           </Link>
@@ -173,10 +195,61 @@ function Header() {
           )}
         </nav>
 
-        <button className="flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm text-[#535041] transition-colors hover:bg-white/90">
-          <Search size={16} />
-          <span className="hidden sm:inline">Tìm kiếm</span>
-        </button>
+        <div ref={searchRef} className="relative">
+          {searchOpen ? (
+            <div className="flex items-center gap-2">
+              <input
+                ref={searchInputRef}
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    setSearchOpen(false);
+                    navigate(`/tours?search=${encodeURIComponent(searchQuery.trim())}`);
+                    setSearchQuery("");
+                    setSearchResults([]);
+                  }
+                }}
+                placeholder="Tìm địa điểm, tên tour..."
+                className="w-56 rounded-full bg-white px-4 py-2 text-sm text-[#535041] placeholder:text-[#8a8576] focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+              <button onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }} className="text-white/80 hover:text-white">
+                <X size={18} />
+              </button>
+              {searchResults.length > 0 && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-[#e0dbd0] bg-white shadow-lg">
+                  {searchLoading && <div className="px-4 py-3 text-sm text-[#64748B]">Đang tìm...</div>}
+                  {!searchLoading && searchResults.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => { navigate(`/tours/${t.id}`); setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[#fffaf2]"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-[#535041]">{t.tourName}</p>
+                        {t.destination && <p className="text-xs text-[#64748B]">{t.destination.name}</p>}
+                      </div>
+                      <span className="ml-2 shrink-0 text-sm font-bold text-[#A79F84]">{t.priceFrom > 0 ? `${(t.priceFrom / 1_000_000).toFixed(1)}tr` : "Liên hệ"}</span>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => { navigate(`/tours?search=${encodeURIComponent(searchQuery.trim())}`); setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
+                    className="w-full border-t border-[#e0dbd0] px-4 py-2.5 text-center text-xs font-medium text-[#A79F84] hover:bg-[#fffaf2]"
+                  >
+                    Xem tất cả kết quả
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button onClick={() => { setSearchOpen(true); setTimeout(() => searchInputRef.current?.focus(), 50); }} className="flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm text-[#535041] transition-colors hover:bg-white/90">
+              <Search size={16} />
+              <span className="hidden sm:inline">Tìm kiếm</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Mobile dropdown */}
@@ -185,7 +258,6 @@ function Header() {
           {[
             { to: "/", label: "Trang chủ" },
             { to: "/tours", label: "Tour" },
-            { to: "/destinations", label: "Điểm đến" },
             { to: "/my-bookings", label: "Chuyến của tôi" },
             { to: "/contact", label: "Liên hệ" },
             ...(user?.role === "Admin" ? [{ to: "/admin", label: "Admin" }] : []),

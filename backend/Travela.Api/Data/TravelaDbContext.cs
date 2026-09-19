@@ -57,6 +57,10 @@ public class TravelaDbContext : DbContext
             e.Property(x => x.Guide).HasMaxLength(500);
             e.Property(x => x.Audience).HasMaxLength(500);
             e.Property(x => x.ContactInfo).HasMaxLength(500);
+            e.Property(x => x.PaymentTerms).HasColumnType("text");
+            e.Property(x => x.CancellationPolicy).HasColumnType("text");
+            e.Property(x => x.ApplicationConditions).HasColumnType("text");
+            e.Property(x => x.ItineraryDays).HasColumnType("text");
             e.HasOne(x => x.Destination).WithMany(d => d.Tours)
                 .HasForeignKey(x => x.DestinationId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.TourName);

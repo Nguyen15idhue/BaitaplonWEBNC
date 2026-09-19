@@ -31,6 +31,11 @@ public class Tour
     public string? Insurance { get; set; }
     public string? Terms { get; set; }
     public string? ContactInfo { get; set; }
+    // Redesign: điều kiện tour chi tiết + lịch trình từng ngày (JSON).
+    public string? PaymentTerms { get; set; }
+    public string? CancellationPolicy { get; set; }
+    public string? ApplicationConditions { get; set; }
+    public string? ItineraryDays { get; set; }
 
     public Destination? Destination { get; set; }
     public ICollection<Price> Prices { get; set; } = new List<Price>();

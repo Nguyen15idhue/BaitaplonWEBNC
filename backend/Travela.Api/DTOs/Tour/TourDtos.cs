@@ -61,6 +61,11 @@ public class TourDetailDto : TourListDto
     public string? Insurance { get; set; }
     public string? Terms { get; set; }
     public string? ContactInfo { get; set; }
+    // Redesign: điều kiện tour chi tiết + lịch trình từng ngày.
+    public string? PaymentTerms { get; set; }
+    public string? CancellationPolicy { get; set; }
+    public string? ApplicationConditions { get; set; }
+    public string? ItineraryDays { get; set; }
 }
 
 public class CreateTourRequest
@@ -88,6 +93,11 @@ public class CreateTourRequest
     public string? Insurance { get; set; }
     public string? Terms { get; set; }
     public string? ContactInfo { get; set; }
+    // Redesign: điều kiện tour chi tiết + lịch trình từng ngày.
+    public string? PaymentTerms { get; set; }
+    public string? CancellationPolicy { get; set; }
+    public string? ApplicationConditions { get; set; }
+    public string? ItineraryDays { get; set; }
 }
 
 public class UpdateTourRequest : CreateTourRequest

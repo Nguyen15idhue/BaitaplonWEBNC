@@ -83,8 +83,8 @@ public static class DbSeeder
         }
         var tourList = db.Tours.OrderBy(t => t.Id).ToList();
 
-        // Backfill nội dung chi tiết cho DB đã seed từ trước (Itinerary null = chưa có nội dung).
-        var missing = tourList.Where(t => t.Itinerary == null).ToList();
+        // Backfill nội dung chi tiết cho DB đã seed từ trước (Itinerary hoặc field mới null = chưa có nội dung).
+        var missing = tourList.Where(t => t.Itinerary == null || t.ItineraryDays == null || t.PaymentTerms == null).ToList();
         if (missing.Count > 0)
         {
             foreach (var t in missing)
@@ -101,22 +101,19 @@ public static class DbSeeder
             {
                 db.Prices.Add(new Price
                 {
-                    TourId = tourList[i].Id, SourceName = "Website",
+                    TourId = tourList[i].Id, SourceName = "Người lớn",
                     PriceValue = basePrices[i], EffectiveDate = now.AddDays(-30), CreatedAt = now
                 });
                 db.Prices.Add(new Price
                 {
-                    TourId = tourList[i].Id, SourceName = "Đối tác",
-                    PriceValue = basePrices[i] + 200000, EffectiveDate = now.AddDays(-60), CreatedAt = now
+                    TourId = tourList[i].Id, SourceName = "Trẻ em",
+                    PriceValue = (long)(basePrices[i] * 0.75), EffectiveDate = now.AddDays(-30), CreatedAt = now
                 });
-                if (i % 2 == 0)
+                db.Prices.Add(new Price
                 {
-                    db.Prices.Add(new Price
-                    {
-                        TourId = tourList[i].Id, SourceName = "Khuyến mãi",
-                        PriceValue = basePrices[i] - 100000, EffectiveDate = now.AddDays(-7), CreatedAt = now
-                    });
-                }
+                    TourId = tourList[i].Id, SourceName = "Phụ thu",
+                    PriceValue = 1200000, EffectiveDate = now.AddDays(-30), CreatedAt = now
+                });
             }
             db.SaveChanges();
         }
@@ -161,8 +158,8 @@ public static class DbSeeder
                 };
                 db.Bookings.Add(booking);
                 db.SaveChanges();
-                // N07: amount theo đúng EffectiveMin (promo chỉ tour chẵn).
-                var unit = tourIdx % 2 == 0 ? basePrices[tourIdx] - 100000 : basePrices[tourIdx];
+                // N07: amount = giá người lớn × số lượng.
+                var unit = basePrices[tourIdx];
                 db.Checkouts.Add(new Checkout
                 {
                     BookingId = booking.Id, PaymentMethod = "Mock",
@@ -180,7 +177,9 @@ public static class DbSeeder
         string Accommodation, string Meals, string Sightseeing, string Guide,
         string Included, string Excluded, string Audience, string Insurance,
         string Terms, string ContactInfo, string DepartureLocation,
-        int StartInDays, int Days);
+        int StartInDays, int Days,
+        string PaymentTerms, string CancellationPolicy, string ApplicationConditions,
+        string ItineraryDays);
 
     private static void ApplyContent(Tour t, TourContent s, DateTime now)
     {
@@ -190,6 +189,8 @@ public static class DbSeeder
         t.Sightseeing = s.Sightseeing; t.Guide = s.Guide;
         t.Included = s.Included; t.Excluded = s.Excluded; t.Audience = s.Audience;
         t.Insurance = s.Insurance; t.Terms = s.Terms; t.ContactInfo = s.ContactInfo;
+        t.PaymentTerms = s.PaymentTerms; t.CancellationPolicy = s.CancellationPolicy;
+        t.ApplicationConditions = s.ApplicationConditions; t.ItineraryDays = s.ItineraryDays;
         if (t.StartDate is null) t.StartDate = start;
         if (t.EndDate is null) t.EndDate = start.AddDays(Math.Max(0, s.Days - 1));
         if (t.DepartureDate is null) t.DepartureDate = start;
@@ -215,7 +216,11 @@ public static class DbSeeder
             Terms: "Đặt cọc 30% khi đăng ký; hủy trước 3 ngày mất cọc; tour khởi hành khi đủ 10 khách",
             ContactInfo: "Travela Hà Nội — Hotline 1900 1888 (8h–22h); HDV Minh Anh 0912 345 678",
             DepartureLocation: "Nhà hát Lớn, Hà Nội",
-            StartInDays: 7, Days: 1),
+            StartInDays: 7, Days: 1,
+            PaymentTerms: "Đặt cọc 30% khi đăng ký, thanh toán剩余 trước ngày khởi hành 3 ngày",
+            CancellationPolicy: "Hủy trước 7 ngày: hoàn 100%; trước 3 ngày: mất cọc 30%; dưới 3 ngày: mất 100%",
+            ApplicationConditions: "Trẻ em dưới 5 tuổi miễn phí (ngủ chung với bố mẹ); trẻ em 5–11 tuổi tính 75% giá; từ 12 tuổi tính giá người lớn",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Hà Nội: Phố cổ – Hồ Gươm\",\"meals\":\"01 bữa trưa\",\"content\":\"Sáng: đón khách tại phố cổ, dạo Hồ Gươm, đền Ngọc Sơn, ăn phở Bát Đàn. Chiều: Văn Miếu – Quốc Tử Giám, Lăng Bác, Hồ Tây, cà phê trứng Giảng. Tối: phố Tạ Hiện, trả khách tại điểm hẹn.\"}]"),
         ["Vịnh Hạ Long 2N1Đ"] = new(
             Route: "Hà Nội → Hạ Long → Hang Sửng Sốt → Đảo Titop → Làng chài Cửa Vạn",
             Duration: "2 ngày 1 đêm",
@@ -232,7 +237,11 @@ public static class DbSeeder
             Terms: "Cọc 50%; hủy trước 7 ngày mất 50% cọc; lịch trình có thể đổi theo thủy triều/thời tiết",
             ContactInfo: "Travela Hạ Long — Hotline 1900 1888; Điều hành Ms. Lan 0987 654 321",
             DepartureLocation: "Cảng Tuần Châu, Hạ Long",
-            StartInDays: 10, Days: 2),
+            StartInDays: 10, Days: 2,
+            PaymentTerms: "Đặt cọc 50% khi đăng ký, thanh toán剩余 trước ngày khởi hành 5 ngày",
+            CancellationPolicy: "Hủy trước 7 ngày: hoàn 50% cọc; trước 3 ngày: mất 50% cọc; dưới 3 ngày: mất 100%",
+            ApplicationConditions: "Trẻ em dưới 5 tuổi miễn phí (ngủ chung); từ 5 tuổi tính giá trẻ em 75%; từ 12 tuổi tính giá người lớn. Lịch trình có thể thay đổi theo thủy triều/thời tiết",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Hà Nội – Hạ Long – Hang Sửng Sốt – Đảo Titop\",\"meals\":\"01 bữa trưa + 01 bữa tối BBQ\",\"content\":\"Lên du thuyền, ăn trưa hải sản, thăm hang Sửng Sốt, tắm biển Titop, tiệc sunset + câu mực đêm.\"},{\"day\":2,\"title\":\"Làng chài Cửa Vạn – Hà Nội\",\"meals\":\"01 brunch\",\"content\":\"Đón bình minh, chèo kayak Cửa Vạn, brunch trên tàu, về Hà Nội chiều tối.\"}]"),
         ["Sa Pa săn mây 3N2Đ"] = new(
             Route: "Hà Nội → Lào Cai → Sa Pa → Fansipan → Bản Cát Cát → Đèo Ô Quy Hồ",
             Duration: "3 ngày 2 đêm",
@@ -249,7 +258,11 @@ public static class DbSeeder
             Terms: "Cọc 30%; mang áo ấm, giày trekking; hủy trước 5 ngày mất cọc",
             ContactInfo: "Travela Tây Bắc — Hotline 1900 1888; HDV A Lử 0961 222 333",
             DepartureLocation: "Bến xe Mỹ Đình, Hà Nội",
-            StartInDays: 14, Days: 3),
+            StartInDays: 14, Days: 3,
+            PaymentTerms: "Đặt cọc 30% khi đăng ký, thanh toán剩余 trước ngày khởi hành 5 ngày",
+            CancellationPolicy: "Hủy trước 7 ngày: hoàn 100%; trước 5 ngày: mất cọc 30%; dưới 5 ngày: mất 100%",
+            ApplicationConditions: "Trẻ em từ 6 tuổi trở lên; không phù hợp người sợ độ cao; cần sức khỏe tốt để trekking",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Hà Nội – Sa Pa – Bản Cát Cát\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Xe giường nằm đêm Hà Nội – Sa Pa, nhận phòng, bản Cát Cát, nhà thờ đá.\"},{\"day\":2,\"title\":\"Fansipan săn mây – Ô Quy Hồ\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Cáp treo Fansipan săn mây, đèo Ô Quy Hồ, chợ tình tối thứ 7.\"},{\"day\":3,\"title\":\"Núi Hàm Rồng – Hà Nội\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Núi Hàm Rồng, mua đặc sản, về Hà Nội.\"}]"),
         ["Huế mộng mơ 2N1Đ"] = new(
             Route: "Huế: Đại Nội → Lăng Khải Định → Chùa Thiên Mụ → Sông Hương",
             Duration: "2 ngày 1 đêm",
@@ -266,7 +279,11 @@ public static class DbSeeder
             Terms: "Cọc 30%; ca Huế hủy khi mưa bão được hoàn vé thuyền",
             ContactInfo: "Travela Huế — Hotline 1900 1888; HDV Thu Hiền 0935 777 888",
             DepartureLocation: "Ga Huế / sân bay Phú Bài",
-            StartInDays: 12, Days: 2),
+            StartInDays: 12, Days: 2,
+            PaymentTerms: "Đặt cọc 30% khi đăng ký, thanh toán剩余 trước ngày khởi hành 3 ngày",
+            CancellationPolicy: "Hủy trước 5 ngày: hoàn 100%; trước 3 ngày: mất cọc 30%; dưới 3 ngày: mất 100%. Ca Huế hủy khi mưa bão được hoàn vé thuyền",
+            ApplicationConditions: "Trẻ em từ 5 tuổi trở lên; phù hợp mọi lứa tuổi, yêu văn hóa – lịch sử",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Đại Nội – Sông Hương – Ca Huế\",\"meals\":\"02 bữa chính\",\"content\":\"Đại Nội, điện Thái Hòa, ăn cơm cung đình, du thuyền sông Hương nghe ca Huế.\"},{\"day\":2,\"title\":\"Lăng tẩm – Chùa Thiên Mụ – Chợ Đông Ba\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Lăng Khải Định, lăng Minh Mạng, chùa Thiên Mụ, chợ Đông Ba.\"}]"),
         ["Đà Nẵng – Bà Nà Hills 3N2Đ"] = new(
             Route: "Đà Nẵng → Bà Nà Hills → Hội An → Bán đảo Sơn Trà → Biển Mỹ Khê",
             Duration: "3 ngày 2 đêm",
@@ -283,7 +300,11 @@ public static class DbSeeder
             Terms: "Cọc 30%; Bà Nà dừng cáp treo do bão được đổi ngày hoặc hoàn vé",
             ContactInfo: "Travela Đà Nẵng — Hotline 1900 1888; HDV Quốc Bảo 0905 111 222",
             DepartureLocation: "Sân bay Đà Nẵng",
-            StartInDays: 15, Days: 3),
+            StartInDays: 15, Days: 3,
+            PaymentTerms: "Đặt cọc 30% khi đăng ký, thanh toán剩余 trước ngày khởi hành 5 ngày",
+            CancellationPolicy: "Hủy trước 7 ngày: hoàn 100%; trước 3 ngày: mất cọc 30%; dưới 3 ngày: mất 100%. Bà Nà dừng cáp treo do bão được đổi ngày hoặc hoàn vé",
+            ApplicationConditions: "Trẻ em dưới 1m miễn vé Bà Nà; phù hợp gia đình, nhóm bạn",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Sơn Trà – Biển Mỹ Khê – Cầu Rồng\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Chùa Linh Ứng, biển Mỹ Khê, cầu Rồng phun lửa tối.\"},{\"day\":2,\"title\":\"Bà Nà Hills – Cầu Vàng – Fantasy Park\",\"meals\":\"01 buffet sáng + 01 buffet trưa Bà Nà + 01 bữa chính\",\"content\":\"Cáp treo Bà Nà, Cầu Vàng, Fantasy Park, làng Pháp, buffet trưa.\"},{\"day\":3,\"title\":\"Hội An phố cổ – Tiễn sân bay\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Phố cổ Hội An + thả đèn, mua sắm, tiễn sân bay.\"}]"),
         ["Hội An đèn lồng 2N1Đ"] = new(
             Route: "Đà Nẵng → Hội An: Phố cổ → Chùa Cầu → Sông Hoài → Làng rau Trà Quế",
             Duration: "2 ngày 1 đêm",
@@ -300,7 +321,11 @@ public static class DbSeeder
             Terms: "Cọc 30%; thả đèn phụ thuộc mực nước sông Hoài",
             ContactInfo: "Travela Hội An — Hotline 1900 1888; HDV Hoài Thương 0914 555 666",
             DepartureLocation: "Sân bay Đà Nẵng",
-            StartInDays: 11, Days: 2),
+            StartInDays: 11, Days: 2,
+            PaymentTerms: "Đặt cọc 30% khi đăng ký, thanh toán剩余 trước ngày khởi hành 3 ngày",
+            CancellationPolicy: "Hủy trước 5 ngày: hoàn 100%; trước 3 ngày: mất cọc 30%; dưới 3 ngày: mất 100%. Thả đèn phụ thuộc mực nước sông Hoài",
+            ApplicationConditions: "Phù hợp cặp đôi, gia đình; đi bộ nhiều trong phố cổ nên mang giày thoải mái",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Phố cổ – Chùa Cầu – Thả đèn sông Hoài\",\"meals\":\"01 bữa chính\",\"content\":\"Phố cổ, Chùa Cầu, hội quán, tối đi thuyền thả đèn hoa đăng sông Hoài.\"},{\"day\":2,\"title\":\"Làng rau Trà Quế – Lớp nấu ăn\",\"meals\":\"01 bữa sáng + 01 bữa chính (lớp nấu ăn)\",\"content\":\"Làm nông dân tại Trà Quế, lớp học nấu ăn, cao lầu – mì Quảng.\"}]"),
         ["Nha Trang biển xanh 3N2Đ"] = new(
             Route: "Nha Trang: Vinpearl → Hòn Mun lặn biển → Tháp Bà Ponagar → Chợ Đầm",
             Duration: "3 ngày 2 đêm",
@@ -317,7 +342,11 @@ public static class DbSeeder
             Terms: "Cọc 30%; tour đảo hủy khi biển động cấp 6+, được đổi ngày",
             ContactInfo: "Travela Nha Trang — Hotline 1900 1888; HDV Khánh Duy 0978 333 444",
             DepartureLocation: "Sân bay Cam Ranh",
-            StartInDays: 18, Days: 3),
+            StartInDays: 18, Days: 3,
+            PaymentTerms: "Đặt cọc 30% khi đăng ký, thanh toán剩余 trước ngày khởi hành 5 ngày",
+            CancellationPolicy: "Hủy trước 7 ngày: hoàn 100%; trước 3 ngày: mất cọc 30%; dưới 3 ngày: mất 100%. Tour đảo hủy khi biển động cấp 6+, được đổi ngày",
+            ApplicationConditions: "Biết bơi cơ bản với tour lặn; trẻ em có khu vui chơi riêng; không phù hợp người sợ sóng lớn",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Tháp Bà Ponagar – Tắm bùn – Biển Trần Phú\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Tháp Bà Ponagar, tắm bùn khoáng, dạo biển Trần Phú.\"},{\"day\":2,\"title\":\"Cano 3 đảo – Lặn san hô Hòn Mun\",\"meals\":\"01 bữa sáng + 01 bữa chính hải sản\",\"content\":\"Cano cao tốc tour đảo + lặn ống thở ngắm san hô Hòn Mun, tiệc hải sản bè nổi.\"},{\"day\":3,\"title\":\"VinWonders – Chợ Đầm\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"VinWonders cả ngày (cáp treo vượt biển), chợ Đầm mua đặc sản.\"}]"),
         ["Sài Gòn về đêm"] = new(
             Route: "TP.HCM: Bùi Viện → Bitexco → Bến Bạch Đằng → Chợ Bến Thành",
             Duration: "1 buổi tối (4 giờ)",
@@ -334,7 +363,11 @@ public static class DbSeeder
             Terms: "Thanh toán 100% khi đăng ký; hủy trước 24h hoàn 50%",
             ContactInfo: "Travela Sài Gòn — Hotline 1900 1888; HDV Chí Thiện 0938 999 000",
             DepartureLocation: "Nhà hát Thành phố, Quận 1",
-            StartInDays: 5, Days: 1),
+            StartInDays: 5, Days: 1,
+            PaymentTerms: "Thanh toán 100% khi đăng ký",
+            CancellationPolicy: "Hủy trước 24h: hoàn 50%; dưới 24h: không hoàn",
+            ApplicationConditions: "Từ 18 tuổi cho combo có rượu; gia đình đi suất không cồn. Tour buổi tối 18h–22h",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Sài Gòn về đêm: Bùi Viện – Bitexco – Du thuyền\",\"meals\":\"01 bữa tối trên du thuyền\",\"content\":\"18h đón khách quận 1, dạo Bùi Viện, lên đài quan sát Bitexco ngắm toàn cảnh. Du thuyền sông Sài Gòn ăn tối + nhạc acoustic, dạo bến Bạch Đằng, trả khách 22h.\"}]"),
         ["Phú Quốc 4N3Đ"] = new(
             Route: "Phú Quốc: VinWonders → Safari → Grand World → Hoàng hôn Sunset Sanato",
             Duration: "4 ngày 3 đêm",
@@ -351,7 +384,11 @@ public static class DbSeeder
             Terms: "Cọc 50%; vé máy bay xuất riêng theo điều kiện hãng; hủy tour mất vé MB",
             ContactInfo: "Travela Phú Quốc — Hotline 1900 1888; HDV Ngọc Hân 0944 123 789",
             DepartureLocation: "Sân bay Tân Sơn Nhất",
-            StartInDays: 21, Days: 4),
+            StartInDays: 21, Days: 4,
+            PaymentTerms: "Đặt cọc 50% khi đăng ký, thanh toán剩余 trước ngày khởi hành 7 ngày",
+            CancellationPolicy: "Hủy trước 10 ngày: hoàn 100%; trước 5 ngày: mất 50% cọc; dưới 5 ngày: mất 100%. Vé máy bay xuất riêng theo điều kiện hãng, hủy tour mất vé máy bay",
+            ApplicationConditions: "Trẻ em dưới 4 tuổi miễn phí (ngủ chung); từ 4 tuổi tính giá trẻ em; phù hợp gia đình, trăng mật",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Phú Quốc – Grand World – Tinh hoa Việt Nam\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Bay đến Phú Quốc, Grand World, show Tinh hoa Việt Nam.\"},{\"day\":2,\"title\":\"VinWonders + Safari\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"VinWonders + Safari (xe bus đưa đón).\"},{\"day\":3,\"title\":\"Tour 4 đảo – Cáp treo Hòn Thơm – Hoàng hôn Sanato\",\"meals\":\"01 bữa sáng + 01 bữa chính hải sản\",\"content\":\"Tour 4 đảo + cáp treo Hòn Thơm, lặn ngắm san hô, hoàng hôn Sunset Sanato.\"},{\"day\":4,\"title\":\"Nhà tù Phú Quốc – Về đất liền\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Nhà tù Phú Quốc, vườn tiêu, mua nước mắm, về đất liền.\"}]"),
         ["Miền Tây sông nước 2N1Đ"] = new(
             Route: "TP.HCM → Mỹ Tho → Bến Tre → Cần Thơ → Chợ nổi Cái Răng",
             Duration: "2 ngày 1 đêm",
@@ -368,7 +405,11 @@ public static class DbSeeder
             Terms: "Cọc 30%; chợ nổi đẹp nhất 5h–7h sáng, trễ giờ tự chịu",
             ContactInfo: "Travela Cần Thơ — Hotline 1900 1888; HDV Út Thương 0922 456 111",
             DepartureLocation: "Bến xe Miền Tây, TP.HCM",
-            StartInDays: 9, Days: 2),
+            StartInDays: 9, Days: 2,
+            PaymentTerms: "Đặt cọc 30% khi đăng ký, thanh toán剩余 trước ngày khởi hành 3 ngày",
+            CancellationPolicy: "Hủy trước 5 ngày: hoàn 100%; trước 3 ngày: mất cọc 30%; dưới 3 ngày: mất 100%. Chợ nổi đẹp nhất 5h–7h sáng, trễ giờ tự chịu",
+            ApplicationConditions: "Mọi lứa tuổi; người say sóng nhẹ nên uống thuốc trước tour ghe",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Mỹ Tho – Bến Tre – Cần Thơ\",\"meals\":\"01 bữa chính\",\"content\":\"Chùa Vĩnh Tràng, cồn Thới Sơn (đờn ca tài tử, kẹo dừa), Bến Tre xuồng ba lá, tối dạo bến Ninh Kiều.\"},{\"day\":2,\"title\":\"Chợ nổi Cái Răng – TP.HCM\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"5h chợ nổi Cái Răng (ăn hủ tiếu trên ghe), vườn trái cây, về TP.HCM.\"}]"),
         ["Đà Lạt mộng mơ 3N2Đ (nháp)"] = new(
             Route: "Đà Lạt: Hồ Tuyền Lâm → Thung lũng Tình Yêu → Làng Cù Lần → Chợ đêm",
             Duration: "3 ngày 2 đêm",
@@ -385,7 +426,11 @@ public static class DbSeeder
             Terms: "Tour nháp chưa nhận booking công khai",
             ContactInfo: "Travela Đà Lạt (sắp mở) — Hotline 1900 1888",
             DepartureLocation: "Bến xe Miền Đông, TP.HCM",
-            StartInDays: 30, Days: 3),
+            StartInDays: 30, Days: 3,
+            PaymentTerms: "Tour nháp chưa nhận booking công khai",
+            CancellationPolicy: "Tour nháp chưa có chính sách hủy",
+            ApplicationConditions: "Tour đang soạn — giá và lịch có thể đổi trước khi mở bán",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Dinh Bảo Đại – Ga xe lửa – Nhà thờ Con Gà\",\"meals\":\"01 bữa chính\",\"content\":\"Dinh Bảo Đại, ga xe lửa, nhà thờ Con Gà.\"},{\"day\":2,\"title\":\"Thung lũng Tình Yêu – Đồi chè Cầu Đất\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Thung lũng Tình Yêu, đồi chè Cầu Đất săn mây, tối chợ đêm + sữa đậu nành.\"},{\"day\":3,\"title\":\"Làng Cù Lần – Thác Datanla – TP.HCM\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Làng Cù Lần, thác Datanla máng trượt, về lại TP.HCM.\"}]"),
         ["Côn Đảo tâm linh 2N1Đ (ẩn)"] = new(
             Route: "Côn Đảo: Nghĩa trang Hàng Dương → Miếu bà Phi Yến → Bãi Đầm Trầu",
             Duration: "2 ngày 1 đêm",
@@ -402,6 +447,10 @@ public static class DbSeeder
             Terms: "Mở lại khi đủ 15 khách/đoàn; giờ lễ theo quy định ban quản lý",
             ContactInfo: "Travela Côn Đảo — Hotline 1900 1888",
             DepartureLocation: "Sân bay Tân Sơn Nhất",
-            StartInDays: 25, Days: 2),
+            StartInDays: 25, Days: 2,
+            PaymentTerms: "Mở lại khi đủ 15 khách/đoàn; đặt cọc 50% khi đăng ký",
+            CancellationPolicy: "Hủy trước 7 ngày: hoàn 100%; trước 3 ngày: mất 50% cọc; dưới 3 ngày: mất 100%",
+            ApplicationConditions: "Tour tạm ẩn — chỉ mở theo yêu cầu đoàn; giờ lễ theo quy định ban quản lý",
+            ItineraryDays: "[{\"day\":1,\"title\":\"Côn Đảo – Viếng mộ – Miếu bà Phi Yến\",\"meals\":\"01 bữa chính\",\"content\":\"Bay ra Côn Đảo, viếng mộ chị Võ Thị Sáu, miếu bà Phi Yến, lễ tối Hàng Dương.\"},{\"day\":2,\"title\":\"Nhà tù Côn Đảo – Bãi Đầm Trầu\",\"meals\":\"01 bữa sáng + 01 bữa chính\",\"content\":\"Nhà tù Côn Đảo, bãi Đầm Trầu ngắm máy bay, mua đặc sản, về đất liền.\"}]"),
     };
 }
