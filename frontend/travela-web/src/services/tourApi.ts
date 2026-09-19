@@ -67,25 +67,17 @@ export interface TourForm {
   description: string;
   destinationId: number;
   maxSeats: number;
-  status: string;
-  startDate: string | null;
-  endDate: string | null;
-  departureDate: string | null;
-  departureLocation: string | null;
-  duration: string | null;
-  route: string | null;
-  itinerary: string | null;
-  transport: string | null;
-  accommodation: string | null;
-  meals: string | null;
-  sightseeing: string | null;
-  guide: string | null;
-  included: string | null;
-  excluded: string | null;
-  audience: string | null;
-  insurance: string | null;
-  terms: string | null;
-  contactInfo: string | null;
+  status?: string;
+  departureDate?: string | null;
+  departureLocation?: string | null;
+  duration?: string | null;
+  included?: string | null;
+  excluded?: string | null;
+  // Redesign fields.
+  paymentTerms?: string | null;
+  cancellationPolicy?: string | null;
+  applicationConditions?: string | null;
+  itineraryDays?: string | null;
 }
 
 export async function createTour(body: TourForm): Promise<TourDetail> {

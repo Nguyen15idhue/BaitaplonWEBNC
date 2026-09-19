@@ -7,7 +7,6 @@ import { Forbidden, NotFound } from "./pages/pages";
 import { Home } from "./pages/Home";
 import { TourList } from "./pages/TourList";
 import { TourDetailPage } from "./pages/TourDetail";
-import { Destinations } from "./pages/Destinations";
 import { BookingPage } from "./pages/Booking";
 import { CheckoutPage } from "./pages/Checkout";
 import { MyBookings } from "./pages/MyBookings";
@@ -15,7 +14,6 @@ import { Profile } from "./pages/Profile";
 import { Dashboard } from "./pages/admin/Dashboard";
 import { AdminUsers } from "./pages/admin/Users";
 import { AdminTours } from "./pages/admin/Tours";
-import { AdminDestinations } from "./pages/admin/Destinations";
 import { AdminBookings } from "./pages/admin/Bookings";
 import { AdminSupports } from "./pages/admin/SupportRequests";
 import { AuditLogs } from "./pages/admin/AuditLogs";
@@ -41,7 +39,6 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/tours" element={<TourList />} />
               <Route path="/tours/:id" element={<TourDetailPage />} />
-              <Route path="/destinations" element={<Destinations />} />
               <Route path="/contact" element={<Contact />} />
               <Route
                 path="/booking/:tourId"
@@ -89,7 +86,6 @@ export default function App() {
               <Route path="/admin" element={<Dashboard />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               <Route path="/admin/tours" element={<AdminTours />} />
-              <Route path="/admin/destinations" element={<AdminDestinations />} />
               <Route path="/admin/bookings" element={<AdminBookings />} />
               <Route path="/admin/support-requests" element={<AdminSupports />} />
               <Route path="/admin/audit-logs" element={<AuditLogs />} />

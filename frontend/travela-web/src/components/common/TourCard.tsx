@@ -44,13 +44,6 @@ export function TourCard({ tour, showDetails = false }: TourCardProps) {
             </>
           )}
 
-          {!showDetails && tour.destination && (
-            <div className="flex items-center gap-2 text-sm text-[#535041]">
-              <MapPin className="h-4 w-4 shrink-0" />
-              <span>{tour.destination.regionName} · {tour.destination.name}</span>
-            </div>
-          )}
-
           <div className="mt-auto flex items-center justify-between pt-2">
             <p className="text-sm text-[#535041]">
               Giá từ <span className="font-bold text-[#A79F84]">{formatVND(tour.priceFrom)}</span>

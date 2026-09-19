@@ -41,7 +41,7 @@ function ExploreSection() {
         {items.map((item) => (
           <Link
             key={item.name}
-            to={`/destinations?search=${encodeURIComponent(item.name)}`}
+            to={`/tours`}
             className="group relative block h-48 overflow-hidden rounded-xl"
           >
             <img

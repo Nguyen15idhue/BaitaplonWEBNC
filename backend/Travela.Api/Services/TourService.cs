@@ -92,6 +92,8 @@ public class TourService
             Excluded = Norm(req.Excluded), Audience = Norm(req.Audience),
             Insurance = Norm(req.Insurance), Terms = Norm(req.Terms),
             ContactInfo = Norm(req.ContactInfo),
+            PaymentTerms = Norm(req.PaymentTerms), CancellationPolicy = Norm(req.CancellationPolicy),
+            ApplicationConditions = Norm(req.ApplicationConditions), ItineraryDays = Norm(req.ItineraryDays),
             CreatedAt = DateTime.UtcNow
         };
         _db.Tours.Add(t);
@@ -130,6 +132,8 @@ public class TourService
         t.Excluded = Norm(req.Excluded); t.Audience = Norm(req.Audience);
         t.Insurance = Norm(req.Insurance); t.Terms = Norm(req.Terms);
         t.ContactInfo = Norm(req.ContactInfo);
+        t.PaymentTerms = Norm(req.PaymentTerms); t.CancellationPolicy = Norm(req.CancellationPolicy);
+        t.ApplicationConditions = Norm(req.ApplicationConditions); t.ItineraryDays = Norm(req.ItineraryDays);
         await _db.SaveChangesAsync();
         await _audit.LogAsync(actorId, "Tour.Update", "Tour", id, old, $"{t.TourName}|{t.Status}");
         return await GetDetailAsync(id, publicOnly: false);
@@ -263,9 +267,10 @@ public class TourService
         await ValidateImageSlotAsync(tourId, caption, sortOrder);
 
         byte[] head = new byte[12];
+        int bytesRead = 0;
         await using (var rs = file.OpenReadStream())
-            await rs.ReadExactlyAsync(head, 0, (int)Math.Min(head.Length, file.Length));
-        if (!IsImageMagic(head, UploadExts[ext]))
+            bytesRead = await rs.ReadAsync(head, 0, head.Length);
+        if (bytesRead < 4 || !IsImageMagic(head, UploadExts[ext]))
             throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "Nội dung file không phải ảnh hợp lệ.");
 
         var dir = Path.Combine(_env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"),
@@ -398,7 +403,11 @@ public class TourService
             Id = t.Id,
             TourName = t.TourName,
             Thumbnail = t.Images.OrderBy(i => i.SortOrder).FirstOrDefault()?.ImageUrl ?? string.Empty,
-            PriceFrom = effective.Count == 0 ? 0 : effective.Min(p => p.PriceValue),
+            PriceFrom = effective.Count == 0
+                ? 0
+                : effective.FirstOrDefault(p => p.SourceName == "Người lớn")?.PriceValue
+                  ?? effective.FirstOrDefault(p => p.SourceName == "người lớn")?.PriceValue
+                  ?? effective.Min(p => p.PriceValue),
             Destination = t.Destination is null ? null : new DestinationBriefDto { Id = t.Destination.Id, Name = t.Destination.Name, RegionName = t.Destination.RegionName },
             Status = t.Status,
             MaxSeats = t.MaxSeats,
@@ -429,6 +438,8 @@ public class TourService
             Guide = t.Guide, Included = t.Included, Excluded = t.Excluded,
             Audience = t.Audience, Insurance = t.Insurance,
             Terms = t.Terms, ContactInfo = t.ContactInfo,
+            PaymentTerms = t.PaymentTerms, CancellationPolicy = t.CancellationPolicy,
+            ApplicationConditions = t.ApplicationConditions, ItineraryDays = t.ItineraryDays,
             Images = t.Images.OrderBy(i => i.SortOrder).Select(ToImageDto).ToList(),
             Prices = PricingHelper.EffectivePrices(t.Prices, now).OrderByDescending(p => p.EffectiveDate).Select(ToPriceDto).ToList()
         };

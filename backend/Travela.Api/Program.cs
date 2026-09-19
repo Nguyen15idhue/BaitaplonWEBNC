@@ -25,7 +25,6 @@ builder.Services.AddSingleton<JwtHelper>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<AuditLogService>();
-builder.Services.AddScoped<DestinationService>();
 builder.Services.AddScoped<TourService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<CheckoutService>();
@@ -182,6 +181,9 @@ using (var scope = app.Services.CreateScope())
 app.UseMiddleware<ExceptionMiddleware>();
 
 // Ảnh tour upload lưu ở wwwroot/uploads, phục vụ public (không cần đăng nhập).
+var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
+Directory.CreateDirectory(webRoot);
+builder.Environment.WebRootPath = webRoot;
 app.UseStaticFiles();
 
 // C5: Swagger chỉ ngoài Production.
