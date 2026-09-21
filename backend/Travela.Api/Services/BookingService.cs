@@ -46,8 +46,7 @@ public class BookingService
     {
         if (req is null)
             throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Thiếu dữ liệu đặt tour.");
-        if (req.Quantity <= 0)
-            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Số lượng phải lớn hơn 0.");
+        // Số lượng kiểm tra theo breakdown (hoặc Quantity legacy) trong TryCreateAsync.
         // C04: V1 chỉ Mock, chặn Card/Transfer tạo Paid giả.
         if (req.PaymentMethod != "Mock")
             throw new AppException(HttpStatusCode.UnprocessableEntity, "UNSUPPORTED_PAYMENT_METHOD",
@@ -117,24 +116,55 @@ public class BookingService
             if (tour.EndDate.HasValue && tour.EndDate.Value < DateTime.UtcNow)
                 throw new AppException(HttpStatusCode.BadRequest, "TOUR_ENDED", "Tour đã kết thúc, không thể đặt.");
 
-            // M01/A4 chốt lifetime capacity: Completed vẫn chiếm chỗ, chỉ trừ Cancelled.
-            var booked = await _db.Bookings
-                .Where(b => b.TourId == req.TourId && b.Status != "Cancelled")
-                .SumAsync(b => (int?)b.Quantity) ?? 0;
-            if (tour.MaxSeats - booked < req.Quantity)
-                throw new AppException(HttpStatusCode.Conflict, "NOT_ENOUGH_SEATS", "Tour đã hết chỗ.");
-
             // C06/A1: tour không có giá hiệu lực -> 422, không tạo checkout 0đ.
             var priceFrom = PricingHelper.EffectiveMin(tour.Prices, DateTime.UtcNow);
             if (priceFrom <= 0)
                 throw new AppException(HttpStatusCode.UnprocessableEntity, "PRICE_NOT_AVAILABLE",
                     "Tour chưa có giá bán, vui lòng liên hệ.");
 
+            // F2 redesign: tính chỗ và tiền từ breakdown loại khách; fallback Quantity legacy.
+            var adultQty = Math.Max(0, req.AdultQty);
+            var childQty = Math.Max(0, req.ChildQty);
+            var supplementQty = Math.Max(0, req.SupplementQty);
+            var seatQty = adultQty + childQty;
+            var useBreakdown = seatQty > 0;
+            if (!useBreakdown) seatQty = req.Quantity;
+            if (seatQty <= 0)
+                throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Số lượng hành khách phải lớn hơn 0.");
+
+            // M01/A4 chốt lifetime capacity: Completed vẫn chiếm chỗ, chỉ trừ Cancelled.
+            var booked = await _db.Bookings
+                .Where(b => b.TourId == req.TourId && b.Status != "Cancelled")
+                .SumAsync(b => (int?)b.Quantity) ?? 0;
+            if (tour.MaxSeats - booked < seatQty)
+                throw new AppException(HttpStatusCode.Conflict, "NOT_ENOUGH_SEATS", "Tour đã hết chỗ.");
+
+            // Server tính tiền từ giá hiệu lực theo từng nguồn (không nhận giá từ client).
+            decimal amount;
+            if (useBreakdown)
+            {
+                var adultPrice = PricingHelper.EffectiveForSource(tour.Prices, DateTime.UtcNow, "Người lớn");
+                if (adultPrice <= 0) adultPrice = priceFrom;
+                var childPrice = PricingHelper.EffectiveForSource(tour.Prices, DateTime.UtcNow, "Trẻ em");
+                if (childPrice <= 0) childPrice = adultPrice;
+                var supplementPrice = PricingHelper.EffectiveForSource(tour.Prices, DateTime.UtcNow, "Phụ thu", "Phụ thu phòng");
+                amount = adultPrice * adultQty + childPrice * childQty + supplementPrice * supplementQty;
+            }
+            else
+            {
+                amount = priceFrom * seatQty;
+            }
+            if (amount <= 0)
+                throw new AppException(HttpStatusCode.UnprocessableEntity, "PRICE_NOT_AVAILABLE",
+                    "Tour chưa có giá bán, vui lòng liên hệ.");
+
             var now = DateTime.UtcNow;
             var booking = new Booking
             {
-                UserId = userId, TourId = tour.Id, BookingDate = now, Quantity = req.Quantity,
+                UserId = userId, TourId = tour.Id, BookingDate = now, Quantity = seatQty,
                 Status = "PendingPayment", CreatedAt = now,
+                ContactName = Norm(req.ContactName), ContactEmail = Norm(req.ContactEmail),
+                ContactPhone = Norm(req.ContactPhone), Note = Norm(req.Note),
                 TrackingTrace = JsonSerializer.Serialize(
                     new List<TrackingStepDto> { new() { Status = "PendingPayment", At = now, By = username, Note = "Tạo đơn" } }, JsonOpts)
             };
@@ -144,7 +174,7 @@ public class BookingService
             var checkout = new Checkout
             {
                 BookingId = booking.Id, PaymentMethod = req.PaymentMethod,
-                Amount = priceFrom * req.Quantity, Status = "Pending",
+                Amount = amount, Status = "Pending",
                 // N06: giữ full ref (không cắt 20 ký tự), entropy đủ, format thống nhất.
                 TransactionRef = $"MOCK-{booking.Id}-{Guid.NewGuid():N}", CreatedAt = now
             };
@@ -243,6 +273,7 @@ public class BookingService
             .Select(b => new
             {
                 b.Id, b.TourId, b.UserId, b.Quantity, b.Status, b.BookingDate, b.TrackingTrace,
+                b.ContactName, b.ContactEmail, b.ContactPhone, b.Note,
                 TourName = b.Tour!.TourName, Username = b.User!.Username,
                 Checkout = b.Checkout == null ? null : new
                 {
@@ -255,6 +286,8 @@ public class BookingService
             Id = r.Id, TourId = r.TourId, TourName = r.TourName ?? string.Empty,
             UserId = r.UserId, Username = r.Username ?? string.Empty,
             Quantity = r.Quantity, Status = r.Status, BookingDate = r.BookingDate,
+            ContactName = r.ContactName, ContactEmail = r.ContactEmail,
+            ContactPhone = r.ContactPhone, Note = r.Note,
             Tracking = ParseSteps(r.TrackingTrace),
             Checkout = r.Checkout is null ? null : new CheckoutDto
             {
@@ -271,6 +304,7 @@ public class BookingService
             .Select(x => new
             {
                 x.Id, x.TourId, x.UserId, x.Quantity, x.Status, x.BookingDate, x.TrackingTrace,
+                x.ContactName, x.ContactEmail, x.ContactPhone, x.Note,
                 TourName = x.Tour!.TourName, Username = x.User!.Username,
                 Checkout = x.Checkout == null ? null : new
                 {
@@ -286,6 +320,8 @@ public class BookingService
             Id = b.Id, TourId = b.TourId, TourName = b.TourName ?? string.Empty,
             UserId = b.UserId, Username = b.Username ?? string.Empty,
             Quantity = b.Quantity, Status = b.Status, BookingDate = b.BookingDate,
+            ContactName = b.ContactName, ContactEmail = b.ContactEmail,
+            ContactPhone = b.ContactPhone, Note = b.Note,
             Tracking = ParseSteps(b.TrackingTrace),
             Checkout = b.Checkout is null ? null : new CheckoutDto
             {
@@ -386,22 +422,6 @@ public class BookingService
         }
     }
 
-    private static BookingDto ToDto(Booking b)
-    {
-        var steps = new List<TrackingStepDto>();
-        try { steps = JsonSerializer.Deserialize<List<TrackingStepDto>>(b.TrackingTrace, JsonOpts) ?? new(); }
-        catch (JsonException) { steps = new(); }
-        return new BookingDto
-        {
-            Id = b.Id, TourId = b.TourId, TourName = b.Tour?.TourName ?? string.Empty,
-            UserId = b.UserId, Username = b.User?.Username ?? string.Empty,
-            Quantity = b.Quantity, Status = b.Status, BookingDate = b.BookingDate,
-            Tracking = steps,
-            Checkout = b.Checkout is null ? null : new CheckoutDto
-            {
-                Id = b.Checkout.Id, Amount = b.Checkout.Amount, Status = b.Checkout.Status,
-                PaymentMethod = b.Checkout.PaymentMethod, TransactionRef = b.Checkout.TransactionRef
-            }
-        };
-    }
+    private static string? Norm(string? s)
+        => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }

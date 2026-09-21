@@ -101,22 +101,23 @@ export function MyBookings() {
         </Field>
       </div>
 
-      {loading && items.length === 0 ? (
-        <Loading />
-      ) : error ? (
-        <ErrorState message={error} />
-      ) : items.length === 0 ? (
-        <EmptyState
-          message="Bạn chưa có chuyến đi nào."
-          action={
-            <Link to="/tours">
-              <Button>Xem tour ngay</Button>
-            </Link>
-          }
-        />
-      ) : (
-        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="min-h-[60vh]">
+        {loading && items.length === 0 ? (
+          <Loading />
+        ) : error ? (
+          <ErrorState message={error} />
+        ) : items.length === 0 ? (
+          <EmptyState
+            message="Bạn chưa có chuyến đi nào."
+            action={
+              <Link to="/tours">
+                <Button>Xem tour ngay</Button>
+              </Link>
+            }
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {items.map((b) => (
               <Card key={b.id}>
                 <h3 className="mb-1 text-sm font-semibold text-[#0F172A]">{b.tourName}</h3>
@@ -143,15 +144,20 @@ export function MyBookings() {
               </Card>
             ))}
           </div>
-          <Pagination page={page} pageSize={pageSize} total={total} onPage={(p) => load(p, status)} />
-        </div>
-      )}
+            <Pagination page={page} pageSize={pageSize} total={total} onPage={(p) => load(p, status)} />
+          </>
+        )}
+      </div>
 
       <Dialog open={!!detail} title={`Booking #${detail?.id}`} onClose={() => setDetail(null)}>
         {detail && (
           <div className="flex flex-col gap-1 text-sm">
             <p>Tour: {detail.tourName}</p>
             <p>Số lượng: {detail.quantity}</p>
+            {detail.contactName && <p>Người đặt: {detail.contactName}</p>}
+            {detail.contactEmail && <p>Email: {detail.contactEmail}</p>}
+            {detail.contactPhone && <p>SĐT: {detail.contactPhone}</p>}
+            {detail.note && <p>Ghi chú: {detail.note}</p>}
             <p>
               Trạng thái: <Badge tone={bookingTone(detail.status)}>{label(BOOKING_STATUS_LABEL, detail.status)}</Badge>
             </p>

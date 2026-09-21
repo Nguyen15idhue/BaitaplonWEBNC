@@ -4,6 +4,7 @@ import { LogOut, Menu, X, User, Search, ChevronLeft, ChevronRight, Phone, Mail }
 import { useAuth } from "../../lib/auth-context";
 import { cn } from "../../lib/utils";
 import { useSliderImages } from "../../lib/image-store";
+import { getTours } from "../../services/tourApi";
 import type { Tour } from "../../types";
 
 function SiteFooter() {
@@ -105,7 +106,6 @@ function Header() {
     setSearchLoading(true);
     searchTimerRef.current = setTimeout(async () => {
       try {
-        const { getTours } = await import("../../services/tourApi");
         const res = await getTours({ search: value.trim(), pageSize: 6 });
         setSearchResults(res.items);
       } catch { setSearchResults([]); }

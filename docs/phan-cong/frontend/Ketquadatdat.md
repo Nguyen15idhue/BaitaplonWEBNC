@@ -223,3 +223,38 @@
 | Seed tours 10 + FE demo | PASS |
 
 **Ghi chú:** Video <5p + ảnh console/mobile để bạn quay/chụp khi demo. Chưa push git (F5 không đổi code, chỉ docs).
+
+---
+
+## Đợt 2 (2026-09-21) — sửa lỗi + bổ sung CRUD user + test Playwright
+
+### File đã tạo/sửa
+
+| File | Hành động | Nội dung chính | Trạng thái |
+|---|---|---|---|
+| `src/pages/admin/Users.tsx` | Sửa | Thêm nút Thêm + dialog Sửa + nút Xóa (giữ khóa/mở nhanh) | ☑ |
+| `src/services/userApi.ts` | Sửa | `createUser`, `updateUser`, `deleteUser` | ☑ |
+| `src/pages/Register.tsx` | Sửa | Thêm field username; bỏ SĐT/họ tên/social dư | ☑ |
+| `src/pages/Login.tsx` | Sửa | Bỏ "Quên mật khẩu" + social login; xóa `ForgotPassword.tsx` + route | ☑ |
+| `src/pages/Booking.tsx`, `src/services/bookingApi.ts`, `src/types/index.ts` | Sửa | Gửi breakdown loại khách + liên hệ; tổng tiền khớp BE | ☑ |
+| `src/pages/MyBookings.tsx`, `src/pages/admin/Bookings.tsx` | Sửa | Hiển thị contact/note trong chi tiết | ☑ |
+| `src/pages/Home.tsx`, `src/pages/Contact.tsx`, `src/pages/admin/Settings.tsx` | Sửa | Bỏ gradient scrim + backdrop-blur; Contact prefill user | ☑ |
+| `src/components/layout/layouts.tsx` | Sửa | Bỏ dynamic import `tourApi` (hết cảnh báo build) | ☑ |
+| `src/components/common/common.tsx`, `src/index.css` | Sửa | `Loading` giữ chỗ, `LoadingBar`, `scrollbar-gutter: stable`; chống nháy footer | ☑ |
+| `src/pages/TourList.tsx`, `MyBookings.tsx`, `admin/{Users,Bookings,SupportRequests,AuditLogs,Tours}.tsx` | Sửa | Giữ nội dung cũ khi tải lại (chống nháy) | ☑ |
+| `src/lib/labels.ts` | Sửa | Nhãn audit `User.Create/Update/Delete` | ☑ |
+
+### Kết quả test
+
+| Checklist | PASS/FAIL | Evidence | Ghi chú |
+|---|---|---|---|
+| `npm run build` | PASS | TS sạch, không còn warning dynamic import | CSS giảm sau khi bỏ gradient |
+| Không còn UI giả | PASS | Playwright: login/register không còn Facebook/Google/Quên mật khẩu | — |
+| Đăng ký qua UI | PASS | Playwright: đăng ký tài khoản mới → về trang chủ | FE-01 |
+| Admin CRUD user | PASS | Playwright: thêm → sửa email → xóa | FE-09 |
+| Lọc tour | PASS | Playwright: tìm "Hạ Long" ra kết quả | FE-08 |
+| Đặt tour E2E | PASS | Playwright: customer đặt tour → tới `/checkout/:id` | FE-02 |
+| Docker fresh | PASS | 3 container Up, backend restarts=0 | — |
+| Playwright UI | PASS | 5/5 | `e2e/ui.spec.ts` |
+
+**Ghi chú:** Test FE dùng Playwright tại `e2e/` (chạy với Docker đang bật: FE `:3001`, BE `:5000`). Tổng đợt: 12/12 PASS (7 API + 5 UI), chạy lại trên DB fresh vẫn 12/12.

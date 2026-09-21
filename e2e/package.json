@@ -1,0 +1,15 @@
+{
+  "name": "travela-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright E2E tests cho Travela (BE API + FE UI)",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test api.spec.ts",
+    "test:ui": "playwright test ui.spec.ts",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

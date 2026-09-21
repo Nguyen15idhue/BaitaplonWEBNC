@@ -36,8 +36,10 @@
 | FE-02 | **P0** | FE+BE | Trang Đặt tour: tổng tiền hiển thị ≠ số tiền BE thu; thông tin liên lạc thu nhưng không gửi | `pages/Booking.tsx`, `services/bookingApi.ts`, `DTOs/Booking`, `BookingService.cs` | M |
 | FE-03 | P1 | FE | "Quên mật khẩu" giả lập bằng `setTimeout`, không có endpoint BE | `pages/ForgotPassword.tsx`, `pages/Login.tsx` | S |
 | FE-04 | P1 | FE | Nút đăng nhập Facebook/Google là placeholder chết | `Login.tsx`, `Register.tsx`, `ForgotPassword.tsx` | S |
-| FE-05 | P1 | FE | Admin "Hình ảnh" lưu base64 vào IndexedDB (blob, per-browser) — trái quy ước ảnh URL | `pages/admin/Settings.tsx`, `lib/image-store.ts` | M |
-| FE-06 | P2 | FE | Vi phạm design-system: gradient + glassmorphism | `Home.tsx`, `Contact.tsx`, `pages/admin/Settings.tsx` | S |
+| FE-05 | — | FE | **Chấp nhận, KHÔNG sửa**: admin chủ động dùng cả URL lẫn file ảnh cho slider/vùng miền | `pages/admin/Settings.tsx`, `lib/image-store.ts` | — |
+| FE-06 | P2 | FE | Class gradient có tồn tại và được vẽ, nhưng là lớp phủ (scrim) rất nhẹ trên ảnh nên nhìn "không thấy gradient" | `Home.tsx`, `Contact.tsx`, `pages/admin/Settings.tsx` | S |
+| FE-08 | P0 | FE | Nháy footer/component khi lọc, tìm kiếm, phân trang | `components/common/common.tsx`, `index.css` + 7 trang danh sách | S |
+| FE-09 | P0 | FE+BE | Trang admin Users thiếu Thêm/Sửa/Xóa | `pages/admin/Users.tsx`, `services/userApi.ts`, `Controllers/UsersController.cs`, `Services/UserService.cs` | M |
 | FE-07 | P2 | FE | Chi tiết nhỏ: warning dynamic import; field SĐT/họ tên đăng ký không gửi; Contact không prefill user | `layouts.tsx`, `Register.tsx`, `Contact.tsx` | S |
 | BE-01 | P1 | BE | `TourService.ListAsync` nạp toàn bộ tour + Prices + Images + Bookings vào RAM rồi mới lọc/sort/phân trang → nghẽn NFR | `Services/TourService.cs` | M |
 | BE-02 | P2 | BE+docs | `docs/api.md` ghi username `[a-z0-9._-]`, code cho phép chữ HOA | `docs/api.md`, `Services/AuthService.cs` | S |
@@ -162,33 +164,104 @@ endpoint reset/forgot.
 
 ---
 
-### FE-05 [P1] — Admin "Hình ảnh" dùng base64/IndexedDB
+### FE-05 [—] — Admin "Hình ảnh" dùng cả URL lẫn file (CHẤP NHẬN, KHÔNG SỬA)
 
-**Mô tả**: `pages/admin/Settings.tsx` + `lib/image-store.ts` cho upload file → `FileReader` ra data URL base64,
-lưu vào IndexedDB (`travela-images`) của **riêng trình duyệt admin**. Không dùng chung, không liên kết bảng `images`
-của tour, và trái quy ước "ảnh chỉ lưu URL, không lưu blob" (AGENTS §4).
+**Kết luận sau khi trao đổi**: Đây là **quyết định thiết kế có chủ đích**, không phải lỗi.
+Trang `/admin/settings` quản lý ảnh **slider trang chủ** và **ảnh vùng miền** — tách biệt hoàn toàn với
+ảnh tour (bảng `images` của BE). Việc cho phép vừa dán URL vừa tải file là tiện dụng cho admin.
 
-**Cách sửa (chọn 1)**
-- **A (khuyến nghị):** Chỉ cho nhập **URL ảnh** (bỏ "Tải từ máy"/base64). Ghi rõ trong trang đây là cấu hình
-  hiển thị phía FE (slider/vùng miền), không phải ảnh tour.
-- **B:** Loại bỏ `/admin/settings` + slider/vùng miền khỏi menu Admin nếu không nằm trong phạm vi báo cáo.
-- **C:** Làm thật: thêm API `site_images` — ngoài phạm vi, không khuyến nghị.
+**Làm rõ quy ước liên quan**:
+- AGENTS §4 "Ảnh chỉ lưu URL chuỗi tối đa 500 ký tự, không lưu blob" áp dụng cho **ảnh tour trong DB backend**.
+- Tính năng slider/vùng miền lưu ở `IndexedDB` phía trình duyệt admin (`lib/image-store.ts`), không gửi lên BE,
+  nên không vi phạm quy ước DB.
 
-**File ảnh hưởng**: `pages/admin/Settings.tsx`, `lib/image-store.ts`, `components/layout/layouts.tsx` (mục menu "Hình ảnh").
-**Kiểm chứng**: không còn đọc file nhị phân; ảnh slider/vùng miền vẫn hiển thị từ URL; build sạch.
+**Đánh đổi đã ghi nhận (không chặn)**:
+- Dữ liệu chỉ có ở máy/trình duyệt của admin, không đồng bộ giữa các máy hay cho khách khác.
+- File ảnh được nhúng base64 nên IndexedDB phình dần nếu tải nhiều ảnh nặng.
+
+**Hành động**: Giữ nguyên. Không đưa vào danh sách sửa. (Nếu sau này muốn dùng chung, mới cần thêm API `site_images`.)
+
+**Kiểm chứng**: không applicable (không sửa).
 
 ---
 
-### FE-06 [P2] — Vi phạm design-system (gradient/glassmorphism)
+### FE-06 [P2] — Làm rõ về "gradient": có tồn tại nhưng là lớp phủ rất nhẹ
 
-**Mô tả**: AGENTS §5 cấm gradient và glassmorphism. Đang có:
-- `pages/Home.tsx:52` `bg-gradient-to-t ...`; `Home.tsx:53` `backdrop-blur-sm`.
+**Vì sao nhìn giao diện vẫn "đúng, không thấy gradient"**
+- Các class đang dùng là `bg-gradient-to-t from-black/40 to-transparent` (và `from-black/60`). Đây **không phải**
+  gradient trang trí (đổi màu rực rỡ) mà là **lớp phủ tối dần đặt trên ảnh** để chữ/nhãn dễ đọc — nhìn vào ảnh
+  thấy bình thường, nên cảm giác "không có gradient" là đúng về mặt cảm quan.
+- Về mặt kỹ thuật, gradient **thực sự được vẽ**: đã kiểm tra CSS build (`index-*.css`) có selector
+  `.bg-gradient-to-t{--tw-gradient-position:to top in oklab;background-image:linear-gradient(var(--tw-gradient-stops))}`.
+  Nghĩa là Tailwind v4 vẫn sinh utility này (không bị "chết class").
+
+**Vậy lỗi ở đâu?** Chỉ là **vi phạm hình thức** so với AGENTS §5 ("cấm gradient, glassmorphism") khi soi class,
+chứ không làm sai giao diện. Mức độ: thấp.
+
+**Vị trí**
+- `pages/Home.tsx:52` `bg-gradient-to-t ...`; `Home.tsx:53` `backdrop-blur-sm` (glassmorphism).
 - `pages/Contact.tsx:57` `bg-gradient-to-t ...`.
 - `pages/admin/Settings.tsx:127` `bg-gradient-to-t ...`.
 
-**Cách sửa**: thay lớp phủ bằng màu đặc có alpha (`bg-black/40`) hoặc `bg-[#535041]/60`; bỏ `backdrop-blur`.
+**Cách sửa (khuyến nghị, không thay đổi hình ảnh nhiều)**:
+- Thay lớp phủ gradient bằng **màu đặc có alpha**: `bg-black/40` hoặc `bg-[#535041]/60` để giữ độ đọc chữ.
+- Bỏ `backdrop-blur-sm` (glassmorphism).
+
 **File ảnh hưởng**: `Home.tsx`, `Contact.tsx`, `pages/admin/Settings.tsx`.
-**Kiểm chứng**: grep `gradient|backdrop-blur` trong `src` = 0 kết quả; build sạch.
+**Kiểm chứng**: grep `gradient|backdrop-blur` trong `src` = 0 kết quả; build sạch; giao diện ảnh không đổi đáng kể.
+
+---
+
+### FE-08 [P0] — Nháy footer/component khi lọc, tìm kiếm, phân trang (ĐÃ SỬA)
+
+**Triệu chứng**: thao tác lọc/tìm/phân trang ở các trang danh sách làm footer (và khối khác) "nháy" lên rồi xuống.
+
+**Nguyên nhân gốc (2 yếu tố cộng dồn)**
+1. **Nội dung bị gỡ khỏi DOM khi tải lại**: các trang dùng pattern `{loading ? <Loading/> : ...}`, mà `Loading`
+   cũ chỉ là **1 dòng chữ**. Mỗi lần lọc → set `loading=true` → toàn bộ grid/table bị thay bằng 1 dòng → chiều
+   cao trang sụp → footer bị kéo nhảy lên; tải xong lại bật xuống.
+2. **Scrollbar bật/tắt gây reflow ngang**: khi số kết quả đổi làm chiều cao vượt/không vượt viewport, thanh cuộn
+   ẩn/hiện → toàn trang giật ngang, càng làm cảm giác "nháy".
+
+**Đã sửa**
+- `components/common/common.tsx`:
+  - `Loading` giờ là khối `min-h-[40vh]` + spinner → giữ chỗ, không sụp layout.
+  - Thêm `LoadingBar` (thanh mảnh `fixed` trên đỉnh) báo đang tải lại, không chiếm layout.
+- 7 trang danh sách (`TourList`, `MyBookings`, `admin/Users`, `admin/Bookings`, `admin/SupportRequests`,
+  `admin/AuditLogs`, `admin/Tours`): đổi `loading ? ...` → `loading && items.length === 0 ? ...` để **giữ nội dung cũ
+  khi tải lại**; bỏ hiệu ứng `opacity-60` (vốn bị coi là nháy).
+- `index.css`: thêm `html { scrollbar-gutter: stable; }` để thanh cuộn luôn giữ chỗ, hết giật ngang.
+
+**File ảnh hưởng**: `components/common/common.tsx`, `index.css`,
+`pages/TourList.tsx`, `pages/MyBookings.tsx`, `pages/admin/{Users,Bookings,SupportRequests,AuditLogs,Tours}.tsx`.
+
+**Kiểm chứng**
+- `npm run build` pass.
+- Container `travela-frontend` đã rebuild; route `/tours` 200; CSS build chứa `scrollbar-gutter: stable`.
+- Thao tác lọc/tìm/phân trang: nội dung cũ giữ nguyên (không gỡ), chỉ có thanh mảnh trên đỉnh.
+
+**Còn lại (nếu vẫn thấy)**: nếu vẫn nháy ở trang cụ thể, cần xác định đúng trang + thao tác để truy tiếp
+(khả năng còn ở các trang tải lần đầu dùng `if (loading) return <Loading/>`: `TourDetail`, `Booking`, `Checkout`, `Profile`).
+
+---
+
+### FE-09 [P0] — Bổ sung CRUD người dùng ở trang admin (ĐÃ LÀM)
+
+**Yêu cầu**: trang `/admin/users` trước đây chỉ có xem + đổi quyền + khóa/mở; cần **Thêm / Sửa / Xóa**.
+
+**Backend (mới)**
+- `POST /api/users` — `{ username, email, password, role, status }`; validate như register; trùng → `409 DUPLICATE_USER`; audit `User.Create` (cùng transaction).
+- `PUT /api/users/{id}` — `{ email, role, status, newPassword? }`; tự hạ quyền/tự khóa chính mình → `400 SELF_ACTION_DENIED`; đổi mật khẩu thu hồi refresh; audit `User.Update`.
+- `DELETE /api/users/{id}` — tự xóa chính mình → `400`; đã có booking → `409 HAS_RELATIONS`; gỡ tham chiếu nullable (support_requests, audit_logs), xóa refresh_tokens/idempotency_keys; audit `User.Delete`.
+- DTO: `CreateUserRequest`, `UpdateUserRequest` (`DTOs/User/UserDtos.cs`).
+- Giữ nguyên `PUT /role`, `PUT /lock` cũ.
+
+**Frontend (mới)**
+- `services/userApi.ts`: `createUser`, `updateUser`, `deleteUser`.
+- `pages/admin/Users.tsx`: nút "Thêm người dùng", dialog thêm/sửa (username, email, password/mật khẩu mới, role, status), nút "Xóa" + ConfirmDialog; giữ nút khóa/mở nhanh.
+- `lib/labels.ts`: nhãn audit `User.Create/Update/Delete`.
+
+**Kiểm chứng**: Playwright — API "user CRUD" (create/duplicate/update/audit/delete) và UI "admin thêm/sửa/xóa người dùng" đều PASS.
 
 ---
 
@@ -262,7 +335,7 @@ hoặc đã `RevokedAt` quá lâu. Không cần thư viện ngoài.
 | 2 | FE-02 Phase A (khớp tiền) | — | — |
 | 3 | FE-02 Phase B (breakdown + contact + migration) | docs/api.md | BE-01 |
 | 4 | FE-03, FE-04, FE-06 | — | BE-02, BE-03 |
-| 5 | FE-05, FE-07 | — | — |
+| 5 | FE-06, FE-07 (FE-05: không sửa; FE-08 đã xong) | — | — |
 | 6 | BE-01 (tối ưu ListAsync) | — | — |
 | 7 | Rebuild Docker fresh + smoke test toàn bộ | tất cả | — |
 | 8 | Cập nhật `Ketquadatdat` BE/FE + evidence | — | — |
@@ -306,18 +379,20 @@ hoặc đã `RevokedAt` quá lâu. Không cần thư viện ngoài.
 
 | ID | Việc | Trạng thái | Người | Evidence |
 |---|---|---|---|---|
-| FE-01 | Thêm field username + sửa submit đăng ký | ☐ | FE | ảnh UI + response 201 |
-| FE-02A | Khớp tổng tiền FE với BE | ☐ | FE | ảnh so sánh |
-| FE-02B | Breakdown giá theo loại khách + contact + migration | ☐ | FE+BE | JSON booking |
-| FE-03 | Bỏ/đổi màn quên mật khẩu giả | ☐ | FE | ảnh |
-| FE-04 | Bỏ/disable social login | ☐ | FE | ảnh |
-| FE-05 | Chỉ dùng URL ảnh, bỏ base64 | ☐ | FE | ảnh + grep |
-| FE-06 | Bỏ gradient/glassmorphism | ☐ | FE | grep 0 |
-| FE-07 | Fix warning import + prefill Contact | ☐ | FE | build log |
-| BE-01 | Tối ưu ListAsync DB-side | ☐ | BE | so sánh output + k6 |
-| BE-02 | Đồng bộ regex username với docs | ☐ | BE | diff docs |
-| BE-03 | Job dọn refresh token | ☐ | BE | log job |
-| BE-04 | Xóa dead code | ☐ | BE | build 0 warning |
+| FE-01 | Thêm field username + sửa submit đăng ký | ✅ | FE | Playwright UI "đăng ký tài khoản mới" + API register 201 |
+| FE-02A | Khớp tổng tiền FE với BE | ✅ | FE | Playwright API "booking breakdown" amount match |
+| FE-02B | Breakdown giá theo loại khách + contact + migration | ✅ | FE+BE | migration `AddBookingContactFields`; booking lưu contact |
+| FE-03 | Bỏ màn quên mật khẩu giả | ✅ | FE | Playwright UI kiểm tra route/không còn màn giả |
+| FE-04 | Bỏ social login chết | ✅ | FE | Playwright UI không còn Facebook/Google |
+| FE-05 | Không sửa (chấp nhận dùng cả URL + file) | ✅ | FE | — |
+| FE-06 | Thay scrim gradient bằng màu đặc, bỏ backdrop-blur | ✅ | FE | grep `gradient|backdrop-blur` = 0 |
+| FE-07 | Fix warning import + prefill Contact | ✅ | FE | `npm run build` không còn cảnh báo |
+| FE-08 | Giữ nội dung khi tải lại + scrollbar-gutter stable | ✅ | FE | build + CSS |
+| FE-09 | Admin Users thêm/sửa/xóa | ✅ | FE+BE | Playwright API + UI CRUD PASS |
+| BE-01 | Tối ưu ListAsync (bỏ Include Bookings) | ✅ | BE | Playwright API tours PASS |
+| BE-02 | Đồng bộ regex username với docs | ✅ | BE | `docs/api.md` đã sửa `[a-zA-Z0-9._-]` |
+| BE-03 | Job dọn refresh token | ✅ | BE | `RefreshTokenCleanupService` đăng ký hosted service |
+| BE-04 | Xóa dead code | ✅ | BE | `dotnet build` 0 warning/0 error |
 
 ---
 
@@ -343,4 +418,48 @@ Invoke-RestMethod -Uri http://localhost:5000/api/admin/stats -Headers @{Authoriz
 
 # FE routes
 1..1 | ForEach-Object { Invoke-WebRequest http://localhost:3001/tours -UseBasicParsing }
+```
+
+---
+
+## 8. Kết quả thực hiện (2026-09-21)
+
+### 8.1. Thay đổi backend
+- `DTOs/User/UserDtos.cs`, `Services/UserService.cs`, `Controllers/UsersController.cs`: CRUD user + audit + tự bảo vệ.
+- `Models/Booking.cs`, `Data/TravelaDbContext.cs`, `DTOs/Booking/BookingDtos.cs`, `Services/BookingService.cs`,
+  `Helpers/PricingHelper.cs`, migration `20260921143743_AddBookingContactFields`: breakdown giá theo loại khách + contact.
+- `Services/TourService.cs`: `ListAsync` bỏ `Include(Bookings)`, đếm chỗ theo trang (1 query GROUP BY).
+- `Services/RefreshTokenCleanupService.cs` (mới) + đăng ký hosted service trong `Program.cs`.
+- `docs/api.md`: bổ sung CRUD users, body booking mới, sửa regex username, ghi chú job dọn token.
+
+### 8.2. Thay đổi frontend
+- `pages/admin/Users.tsx` + `services/userApi.ts` + `lib/labels.ts`: thêm/sửa/xóa người dùng.
+- `pages/Register.tsx`: thêm field `username`, bỏ field thừa (SĐT/họ tên/social).
+- `pages/Login.tsx`: bỏ "Quên mật khẩu"; xóa `pages/ForgotPassword.tsx` và route.
+- `pages/Booking.tsx` + `services/bookingApi.ts` + `types/index.ts`: gửi breakdown + liên hệ; hiển thị tổng khớp BE.
+- `pages/MyBookings.tsx`, `pages/admin/Bookings.tsx`: hiển thị contact/note.
+- `Home.tsx`, `Contact.tsx`, `pages/admin/Settings.tsx`: bỏ gradient/backdrop-blur; `Contact.tsx` prefill user.
+- `components/layout/layouts.tsx`: bỏ dynamic import (hết cảnh báo build).
+- `components/common/common.tsx` + `index.css`: `Loading` giữ chỗ, `LoadingBar`, `scrollbar-gutter: stable`; 7 trang danh sách giữ nội dung khi tải lại.
+
+### 8.3. Kiểm thử
+| Hạng mục | Kết quả |
+|---|---|
+| `dotnet build backend/Travela.Api` | 0 warning / 0 error |
+| `npm run build frontend/travela-web` | pass TS, không còn `INEFFECTIVE_DYNAMIC_IMPORT` |
+| Docker fresh `down -v && up --build` | 3 container Up, backend `restarts=0`, health db up; migrations = 8, tours = 12, users = 3 |
+| Playwright — API (`e2e/api.spec.ts`) | 7/7 PASS: health, tours/destinations, RBAC 401/403/400, user CRUD + audit, booking breakdown amount + contact, giá 422 + hết chỗ 409, register |
+| Playwright — UI (`e2e/ui.spec.ts`) | 5/5 PASS: login/register không còn social/forgot, đăng ký mới, admin CRUD user, lọc tour, đặt tour E2E tới checkout |
+| Tổng Playwright | **12/12 PASS** (chạy lại trên DB fresh vẫn 12/12) |
+
+### 8.4. Cách chạy lại test
+```powershell
+# Yêu cầu: docker compose up -d --build đang chạy (FE :3001, BE :5000)
+cd e2e
+npm install
+npx playwright install chromium
+npx playwright test          # tất cả
+npx playwright test api.spec.ts   # chỉ API
+npx playwright test ui.spec.ts    # chỉ UI
+npx playwright show-report
 ```

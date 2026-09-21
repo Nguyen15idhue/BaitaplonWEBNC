@@ -101,7 +101,7 @@ export function AuditLogs() {
       ) : items.length === 0 ? (
         <EmptyState message="Chưa có lịch sử nào khớp điều kiện lọc." />
       ) : (
-        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
+        <div>
           <Table headers={["ID", "Người làm", "Hành động", "Đối tượng", "ID", "Cũ → Mới", "Lúc"]}>
             {items.map((a) => (
               <tr key={a.id} className="border-b border-[#E2E8F0]">

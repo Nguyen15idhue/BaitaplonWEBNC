@@ -130,7 +130,7 @@ export function AdminSupports() {
       ) : items.length === 0 ? (
         <EmptyState message="Chưa có yêu cầu hỗ trợ." />
       ) : (
-        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
+        <div>
           <Table headers={["Mã", "Người gửi", "Email", "Chủ đề", "Trạng thái", "Ngày gửi", "Thao tác"]}>
             {items.map((s) => (
               <tr key={s.id} className="border-b border-[#E2E8F0]">

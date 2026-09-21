@@ -131,29 +131,31 @@ export function TourList() {
         <FieldError message={filterError} />
       </Card>
 
-      {loading && tours.length === 0 ? (
-        <Loading />
-      ) : error ? (
-        <ErrorState message={error} />
-      ) : tours.length === 0 ? (
-        <EmptyState
-          message="Không tìm thấy tour phù hợp. Thử nới điều kiện lọc."
-          action={
-            <Button variant="outline" onClick={reset}>
-              Xem tất cả tour
-            </Button>
-          }
-        />
-      ) : (
-        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
-          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
-            {tours.map((t) => (
-              <TourCard key={t.id} tour={t} />
-            ))}
-          </div>
-          <Pagination page={page} pageSize={pageSize} total={total} onPage={load} />
-        </div>
-      )}
+      <div className="min-h-[60vh]">
+        {loading && tours.length === 0 ? (
+          <Loading />
+        ) : error ? (
+          <ErrorState message={error} />
+        ) : tours.length === 0 ? (
+          <EmptyState
+            message="Không tìm thấy tour phù hợp. Thử nới điều kiện lọc."
+            action={
+              <Button variant="outline" onClick={reset}>
+                Xem tất cả tour
+              </Button>
+            }
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
+              {tours.map((t) => (
+                <TourCard key={t.id} tour={t} />
+              ))}
+            </div>
+            <Pagination page={page} pageSize={pageSize} total={total} onPage={load} />
+          </>
+        )}
+      </div>
     </div>
   );
 }

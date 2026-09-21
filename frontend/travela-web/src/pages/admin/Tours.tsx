@@ -327,7 +327,7 @@ export function AdminTours() {
       ) : items.length === 0 ? (
         <EmptyState message="Chưa có tour." />
       ) : (
-        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
+        <div>
           <Table headers={["ID", "Tên", "Giá từ", "Trạng thái", "Thao tác"]}>
             {items.map((t) => (
               <tr key={t.id} className="border-b border-[#E2E8F0]">

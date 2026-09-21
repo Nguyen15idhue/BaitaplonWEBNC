@@ -114,7 +114,7 @@ export function AdminBookings() {
       ) : items.length === 0 ? (
         <EmptyState message="Không có booking." />
       ) : (
-        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
+        <div>
           <Table headers={["Mã", "Tour", "Khách", "SL", "Tiền", "Trạng thái", "Thao tác"]}>
             {items.map((b) => (
               <tr key={b.id} className="border-b border-[#E2E8F0]">
@@ -144,6 +144,8 @@ export function AdminBookings() {
             <p>
               Tour: {detail.tourName} · User: {detail.username} · SL: {detail.quantity}
             </p>
+            {detail.contactName && <p>Người đặt: {detail.contactName} · {detail.contactEmail} · {detail.contactPhone}</p>}
+            {detail.note && <p>Ghi chú: {detail.note}</p>}
             <p>
               Trạng thái: <Badge tone={bookingTone(detail.status)}>{label(BOOKING_STATUS_LABEL, detail.status)}</Badge>
             </p>

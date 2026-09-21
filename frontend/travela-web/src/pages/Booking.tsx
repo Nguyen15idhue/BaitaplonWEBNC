@@ -52,8 +52,8 @@ export function BookingPage() {
   const childPrice = prices.find((p) => p.sourceName.toLowerCase() === "trẻ em");
   const supplementPrice = prices.find((p) => p.sourceName.toLowerCase() === "phụ thu");
 
-  const adultUnit = adultPrice?.priceValue ?? 0;
-  const childUnit = childPrice?.priceValue ?? 0;
+  const adultUnit = adultPrice?.priceValue ?? current.priceFrom ?? 0;
+  const childUnit = childPrice?.priceValue ?? adultUnit;
   const supplementUnit = supplementPrice?.priceValue ?? 0;
   const totalAmount = adultUnit * adultQty + childUnit * childQty + supplementUnit * supplementQty;
   const totalQuantity = adultQty + childQty;
@@ -95,7 +95,17 @@ export function BookingPage() {
     setFieldError("");
     setSubmitting(true);
     try {
-      const booking = await createBooking(current.id, totalQuantity);
+      const contactNote = [address.trim(), note.trim()].filter(Boolean).join(" | ");
+      const booking = await createBooking({
+        tourId: current.id,
+        adultQty,
+        childQty,
+        supplementQty,
+        contactName: fullName.trim(),
+        contactEmail: email.trim(),
+        contactPhone: phone.trim(),
+        note: contactNote || undefined,
+      });
       sessionStorage.setItem(`booked_${tourId}`, String(booking.id));
       push("Đặt tour thành công.", "success");
       navigate(`/checkout/${booking.id}`);

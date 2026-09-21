@@ -90,6 +90,10 @@ export interface Booking {
   quantity: number;
   status: string;
   bookingDate: string;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  note: string | null;
   tracking: TrackingStep[];
   checkout?: Checkout;
 }
