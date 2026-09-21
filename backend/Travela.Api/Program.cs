@@ -16,9 +16,12 @@ using Travela.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // B1: EF Core + Pomelo MySQL.
+// H14: dùng server version cố định thay ServerVersion.AutoDetect — AutoDetect mở
+// kết nối ngay khi tạo DbContext (ngoài vòng retry) nên container crash khi MySQL chưa
+// sẵn sàng lúc fresh up. MySQL 8.4 theo stack.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<TravelaDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 0))));
 
 // B2: Services.
 builder.Services.AddSingleton<JwtHelper>();
@@ -26,6 +29,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<TourService>();
+builder.Services.AddScoped<DestinationService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<CheckoutService>();
 builder.Services.AddScoped<AdminStatsService>();
@@ -161,7 +165,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TravelaDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
-    const int maxTry = 10;
+    const int maxTry = 40;
     for (var i = 1; i <= maxTry; i++)
     {
         try

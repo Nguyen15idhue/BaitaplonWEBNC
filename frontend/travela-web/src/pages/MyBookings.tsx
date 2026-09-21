@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { cancelBooking, getBooking, getMyBookings, payBooking } from "../services/bookingApi";
 import type { Booking } from "../types";
-import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../components/common/common";
+import { Loading, LoadingBar, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../components/common/common";
 import { Card, Badge } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Field, Select } from "../components/ui/fields";
@@ -87,6 +87,7 @@ export function MyBookings() {
   return (
     <div>
       <PageHeader title="Chuyến của tôi" />
+      <LoadingBar active={loading && items.length > 0} />
       <div className="mb-4 max-w-xs">
         <Field label="Trạng thái">
           <Select value={status} onChange={(e) => changeStatus(e.target.value)}>
@@ -100,7 +101,7 @@ export function MyBookings() {
         </Field>
       </div>
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <Loading />
       ) : error ? (
         <ErrorState message={error} />
@@ -114,7 +115,7 @@ export function MyBookings() {
           }
         />
       ) : (
-        <>
+        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {items.map((b) => (
               <Card key={b.id}>
@@ -143,7 +144,7 @@ export function MyBookings() {
             ))}
           </div>
           <Pagination page={page} pageSize={pageSize} total={total} onPage={(p) => load(p, status)} />
-        </>
+        </div>
       )}
 
       <Dialog open={!!detail} title={`Booking #${detail?.id}`} onClose={() => setDetail(null)}>

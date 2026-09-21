@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin) + agent (F4 hoàn thiện) + agent (F4.1 UI/UX)
-* Nhánh/commit: main, chưa commit/push F4.1 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (F4.1 xong; hint demo + BE-1/BE-2 để dành)
+* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin) + agent (F4 hoàn thiện) + agent (F4.1 UI/UX) + agent (F5 rehearsal)
+* Nhánh/commit: main, chưa commit/push F5 docs (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (F5 xong; FE hoàn tất F0-F5)
 * BE đối chiếu: Health, Auth, Users, Audit (B2), Tours, Prices, Images, Destinations (B3), Bookings, Checkouts (B4), NFR + rehearsal (B5) — Swagger đủ 23 paths, k6 p95=68.79ms
 * Tài khoản test API thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
 
@@ -197,20 +197,29 @@
 
 ---
 
-## F5. Polish + Demo — CHƯA
+## F5. Polish + Demo — XONG (rà soát + rehearsal fresh, chờ click tay + video)
 
-### File đã tạo/sửa (dự kiến)
+### File đã tạo/sửa
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| Fix responsive/CSS | Sửa | Mobile/tablet/desktop, bảng admin scroll ngang, rà design-system | ☐ |
+| (Không sửa code) | Rà soát | 0 console.log/error; màu/radius đúng token, không gradient/glass; validation FE/BE đã trùng từ B3/B4/F2 | ☑ |
 
 ### Kết quả test
 
 | Checklist F5 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Không error console, build sạch | | `npm run build` + console log ... | |
-| Mobile không vỡ | | Ảnh ... | |
-| Docker fresh demo mượt | | Video/ảnh ... | `docker compose up -d --build`, demo `localhost:3001` |
+| Không error console, build sạch | PASS | Grep 0 console.*; `npm run build` + Docker build sạch | Console browser chờ bạn F12 |
+| Mobile không vỡ | PASS (code) | Hamburger + drawer + table scroll + dialog 90vh từ F4.1 | Chờ bạn devtools/điện thoại |
+| Docker fresh demo mượt | PASS | `down -v` → `up --build`: 3 Up, health db:up, seed tours 10, Swagger 24 paths, FE 5/5 routes 200 + title đúng | Không cần `npm run dev` |
 
-**Ghi chú:** Đóng băng tính năng ở F5, chỉ fix bug.
+### DoD rehearsal fresh (2026-09-07)
+
+| Tiêu chí | Kết quả |
+|---|---|
+| 3 container Up + health db:up | PASS |
+| RBAC 401/403/400/422/409 | PASS (me 401, users-customer 403, tự khóa 400, giá sai 422, hết chỗ 409) |
+| Audit log | PASS (audit API 200, seed 0 rows đúng vì chưa thao tác) |
+| Seed tours 10 + FE demo | PASS |
+
+**Ghi chú:** Video <5p + ảnh console/mobile để bạn quay/chụp khi demo. Chưa push git (F5 không đổi code, chỉ docs).

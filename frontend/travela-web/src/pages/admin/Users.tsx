@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { listUsers, updateUserLock, updateUserRole } from "../../services/userApi";
 import type { User } from "../../types";
 import { useAuth } from "../../lib/auth-context";
-import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../../components/common/common";
+import { Loading, LoadingBar, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../../components/common/common";
 import { Card, Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
@@ -79,6 +79,7 @@ export function AdminUsers() {
   return (
     <div>
       <PageHeader title="Quản lý người dùng" />
+      <LoadingBar active={loading && items.length > 0} />
       <Card className="mb-4">
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -113,14 +114,14 @@ export function AdminUsers() {
         </div>
       </Card>
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <Loading />
       ) : error ? (
         <ErrorState message={error} />
       ) : items.length === 0 ? (
         <EmptyState message="Không có user." />
       ) : (
-        <>
+        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           <Table headers={["Mã", "Tên đăng nhập", "Email", "Quyền", "Trạng thái", "Thao tác"]}>
             {items.map((u) => {
               const isMe = me?.id === u.id;
@@ -152,7 +153,7 @@ export function AdminUsers() {
             })}
           </Table>
           <Pagination page={page} pageSize={pageSize} total={total} onPage={(p) => load(p, search)} />
-        </>
+        </div>
       )}
 
       <ConfirmDialog

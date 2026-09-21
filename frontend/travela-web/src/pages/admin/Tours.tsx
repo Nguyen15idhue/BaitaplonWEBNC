@@ -5,8 +5,9 @@ import {
   getTourPrices, createPrice, updatePrice, deletePrice, createImage, uploadImage, deleteImage,
   type TourForm,
 } from "../../services/tourApi";
-import type { Tour, TourDetail, TourPrice, ItineraryDay } from "../../types";
-import { Loading, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../../components/common/common";
+import { listDestinations } from "../../services/destinationApi";
+import type { Tour, TourDetail, TourPrice, ItineraryDay, Destination } from "../../types";
+import { Loading, LoadingBar, EmptyState, ErrorState, PageHeader, Pagination, ConfirmDialog } from "../../components/common/common";
 import { Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
@@ -36,6 +37,7 @@ const EMPTY_FORM: TourForm = {
 export function AdminTours() {
   const { push } = useToast();
   const [items, setItems] = useState<Tour[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -74,6 +76,10 @@ export function AdminTours() {
 
   useEffect(() => {
     load(1);
+    // Điểm đến cho select khi tạo/sửa tour (BE bắt buộc destinationId hợp lệ).
+    listDestinations()
+      .then(setDestinations)
+      .catch(() => setDestinations([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -131,6 +137,10 @@ export function AdminTours() {
     }
     if (form.maxSeats <= 0) {
       setFieldError("Số chỗ phải lớn hơn 0.");
+      return false;
+    }
+    if (!form.destinationId || form.destinationId <= 0) {
+      setFieldError("Vui lòng chọn điểm đến.");
       return false;
     }
     setFieldError("");
@@ -305,18 +315,19 @@ export function AdminTours() {
   return (
     <div>
       <PageHeader title="Quản lý Tour" />
+      <LoadingBar active={loading && items.length > 0} />
       <div className="mb-4">
         <Button onClick={openCreate}>Thêm tour</Button>
       </div>
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <Loading />
       ) : error ? (
         <ErrorState message={error} />
       ) : items.length === 0 ? (
         <EmptyState message="Chưa có tour." />
       ) : (
-        <>
+        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           <Table headers={["ID", "Tên", "Giá từ", "Trạng thái", "Thao tác"]}>
             {items.map((t) => (
               <tr key={t.id} className="border-b border-[#E2E8F0]">
@@ -345,7 +356,7 @@ export function AdminTours() {
             total={total}
             onPage={load}
           />
-        </>
+        </div>
       )}
 
       <Dialog open={dialogOpen} title={editingId === null ? "Thêm tour" : `Sửa tour #${editingId}`} onClose={() => setDialogOpen(false)} dismissible={false}>
@@ -358,6 +369,16 @@ export function AdminTours() {
               </Field>
               <Field label="Mã tour / Mô tả">
                 <Textarea placeholder="VD: NDSGN612-061-210925XE-V — Giới thiệu tour" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </Field>
+              <Field label="Điểm đến">
+                <Select value={form.destinationId || ""} onChange={(e) => setForm({ ...form, destinationId: Number(e.target.value) })}>
+                  <option value="">-- Chọn điểm đến --</option>
+                  {destinations.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.regionName})
+                    </option>
+                  ))}
+                </Select>
               </Field>
               <Field label="Số chỗ tối đa">
                 <Input type="number" min={1} placeholder="VD: 30" value={form.maxSeats} onChange={(e) => setForm({ ...form, maxSeats: Number(e.target.value) })} />

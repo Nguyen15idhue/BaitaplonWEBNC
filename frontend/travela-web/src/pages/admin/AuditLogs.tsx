@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { pageAuditLogs, type AuditLog } from "../../services/auditApi";
-import { Loading, EmptyState, ErrorState, PageHeader, Pagination } from "../../components/common/common";
+import { Loading, LoadingBar, EmptyState, ErrorState, PageHeader, Pagination } from "../../components/common/common";
 import { Card } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Input, Select, Field } from "../../components/ui/fields";
@@ -58,6 +58,7 @@ export function AuditLogs() {
   return (
     <div>
       <PageHeader title="Lịch sử hoạt động" />
+      <LoadingBar active={loading && items.length > 0} />
       <Card className="mb-4">
         <div
           className="grid grid-cols-1 gap-2 md:grid-cols-4"
@@ -93,14 +94,14 @@ export function AuditLogs() {
         </div>
       </Card>
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <Loading />
       ) : error ? (
         <ErrorState message={error} />
       ) : items.length === 0 ? (
         <EmptyState message="Chưa có lịch sử nào khớp điều kiện lọc." />
       ) : (
-        <>
+        <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
           <Table headers={["ID", "Người làm", "Hành động", "Đối tượng", "ID", "Cũ → Mới", "Lúc"]}>
             {items.map((a) => (
               <tr key={a.id} className="border-b border-[#E2E8F0]">
@@ -124,7 +125,7 @@ export function AuditLogs() {
             total={total}
             onPage={(p) => load(p, entityType, entityId)}
           />
-        </>
+        </div>
       )}
     </div>
   );
