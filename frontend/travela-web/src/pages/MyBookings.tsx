@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button";
 import { Field, Select } from "../components/ui/fields";
 import { Dialog } from "../components/ui/dialog";
 import { useToast, toastForApiError } from "../components/ui/toast";
-import { formatVND, bookingTone } from "../lib/format";
+import { formatVND, bookingTone, formatDateTime } from "../lib/format";
 import { label, BOOKING_STATUS_LABEL } from "../lib/labels";
 
 const STATUSES = ["", "PendingPayment", "Paid", "Confirmed", "Ongoing", "Completed", "Cancelled"];
@@ -153,10 +153,12 @@ export function MyBookings() {
         {detail && (
           <div className="flex flex-col gap-1 text-sm">
             <p>Tour: {detail.tourName}</p>
+            {detail.departureDate && <p>Khởi hành: {formatDateTime(detail.departureDate)}</p>}
             <p>Số lượng: {detail.quantity}</p>
             {detail.contactName && <p>Người đặt: {detail.contactName}</p>}
             {detail.contactEmail && <p>Email: {detail.contactEmail}</p>}
             {detail.contactPhone && <p>SĐT: {detail.contactPhone}</p>}
+            {detail.contactAddress && <p>Địa chỉ: {detail.contactAddress}</p>}
             {detail.note && <p>Ghi chú: {detail.note}</p>}
             <p>
               Trạng thái: <Badge tone={bookingTone(detail.status)}>{label(BOOKING_STATUS_LABEL, detail.status)}</Badge>

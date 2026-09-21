@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Tour } from "../../types";
-import { formatVND } from "../../lib/format";
+import { formatVND, formatDateTime } from "../../lib/format";
 import { SafeImage } from "./SafeImage";
 import { FileText, MapPin, Calendar, Clock } from "lucide-react";
 
@@ -29,10 +29,10 @@ export function TourCard({ tour, showDetails = false }: TourCardProps) {
                   <span>Khởi hành: {tour.departureLocation}</span>
                 </div>
               )}
-              {tour.departureDate && (
+              {tour.startDate && (
                 <div className="flex items-center gap-2 text-sm text-[#535041]">
                   <Calendar className="h-4 w-4 shrink-0" />
-                  <span>Ngày khởi hành: {new Date(tour.departureDate).toLocaleDateString("vi-VN")}</span>
+                  <span>Khởi hành: {formatDateTime(tour.startDate)}</span>
                 </div>
               )}
               {tour.duration && (

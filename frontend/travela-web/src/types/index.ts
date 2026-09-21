@@ -33,7 +33,6 @@ export interface Tour {
   availableSeats: number;
   startDate: string | null;
   endDate: string | null;
-  departureDate?: string | null;
   departureLocation?: string | null;
   duration?: string | null;
   // Optional để tương thích UI main (TourCard dùng description); BE list không trả field này.
@@ -90,9 +89,11 @@ export interface Booking {
   quantity: number;
   status: string;
   bookingDate: string;
+  departureDate: string | null;
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
+  contactAddress: string | null;
   note: string | null;
   tracking: TrackingStep[];
   checkout?: Checkout;

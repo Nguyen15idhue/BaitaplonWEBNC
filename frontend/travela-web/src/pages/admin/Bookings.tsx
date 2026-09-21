@@ -9,7 +9,7 @@ import { Button } from "../../components/ui/button";
 import { Select, Input, Field } from "../../components/ui/fields";
 import { Dialog } from "../../components/ui/dialog";
 import { useToast, toastForApiError } from "../../components/ui/toast";
-import { formatVND, bookingTone } from "../../lib/format";
+import { formatVND, bookingTone, formatDateTime } from "../../lib/format";
 import { label, BOOKING_STATUS_LABEL } from "../../lib/labels";
 
 const STATUSES = ["", "PendingPayment", "Paid", "Confirmed", "Ongoing", "Completed", "Cancelled"];
@@ -144,7 +144,9 @@ export function AdminBookings() {
             <p>
               Tour: {detail.tourName} · User: {detail.username} · SL: {detail.quantity}
             </p>
+            {detail.departureDate && <p>Khởi hành: {formatDateTime(detail.departureDate)}</p>}
             {detail.contactName && <p>Người đặt: {detail.contactName} · {detail.contactEmail} · {detail.contactPhone}</p>}
+            {detail.contactAddress && <p>Địa chỉ: {detail.contactAddress}</p>}
             {detail.note && <p>Ghi chú: {detail.note}</p>}
             <p>
               Trạng thái: <Badge tone={bookingTone(detail.status)}>{label(BOOKING_STATUS_LABEL, detail.status)}</Badge>

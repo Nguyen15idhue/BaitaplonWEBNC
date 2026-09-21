@@ -8,8 +8,10 @@ RUN dotnet publish -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+# Timezone Việt Nam (UTC+7): cài tzdata để TZ=Asia/Ho_Chi_Minh có hiệu lực.
+ENV TZ=Asia/Ho_Chi_Minh
 # curl cho HEALTHCHECK (image aspnet không có sẵn).
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+RUN apt-get update && apt-get install -y --no-install-recommends curl tzdata \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
 EXPOSE 8080

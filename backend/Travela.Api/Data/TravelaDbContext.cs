@@ -105,6 +105,7 @@ public class TravelaDbContext : DbContext
             e.Property(x => x.ContactName).HasMaxLength(200);
             e.Property(x => x.ContactEmail).HasMaxLength(200);
             e.Property(x => x.ContactPhone).HasMaxLength(20);
+            e.Property(x => x.ContactAddress).HasMaxLength(300);
             e.Property(x => x.Note).HasColumnType("text");
             e.HasOne(x => x.User).WithMany(u => u.Bookings)
                 .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);

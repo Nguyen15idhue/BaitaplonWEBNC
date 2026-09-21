@@ -15,7 +15,10 @@ public class Booking
     public string? ContactName { get; set; }
     public string? ContactEmail { get; set; }
     public string? ContactPhone { get; set; }
+    public string? ContactAddress { get; set; }
     public string? Note { get; set; }
+    // Mốc khởi hành của tour tại thời điểm đặt (snapshot, kèm giờ).
+    public DateTime? DepartureDate { get; set; }
     // M12: optimistic concurrency cho state machine (tăng mỗi lần đổi trạng thái).
     public long Version { get; set; }
 

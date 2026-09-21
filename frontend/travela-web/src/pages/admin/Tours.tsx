@@ -15,7 +15,7 @@ import { Input, Textarea, Select, Field, FieldError } from "../../components/ui/
 import { Dialog } from "../../components/ui/dialog";
 import { Tabs, TabPanel } from "../../components/ui/tabs";
 import { useToast, toastForApiError } from "../../components/ui/toast";
-import { formatVND } from "../../lib/format";
+import { formatVND, toLocalInput, fromLocalInput } from "../../lib/format";
 import { label, TOUR_STATUS_LABEL } from "../../lib/labels";
 
 const EMPTY_FORM: TourForm = {
@@ -24,11 +24,23 @@ const EMPTY_FORM: TourForm = {
   destinationId: 0,
   maxSeats: 20,
   status: "Draft",
-  departureDate: "",
+  startDate: "",
+  endDate: "",
   departureLocation: "",
   duration: "",
+  route: "",
+  itinerary: "",
+  transport: "",
+  accommodation: "",
+  meals: "",
+  sightseeing: "",
+  guide: "",
   included: "",
   excluded: "",
+  audience: "",
+  insurance: "",
+  terms: "",
+  contactInfo: "",
   paymentTerms: "",
   cancellationPolicy: "",
   applicationConditions: "",
@@ -108,11 +120,23 @@ export function AdminTours() {
         destinationId: d.destinationId,
         maxSeats: d.maxSeats,
         status: d.status,
-        departureDate: (d.departureDate ?? "").slice(0, 10),
+        startDate: toLocalInput(d.startDate),
+        endDate: toLocalInput(d.endDate),
         departureLocation: d.departureLocation ?? "",
         duration: d.duration ?? "",
+        route: d.route ?? "",
+        itinerary: d.itinerary ?? "",
+        transport: d.transport ?? "",
+        accommodation: d.accommodation ?? "",
+        meals: d.meals ?? "",
+        sightseeing: d.sightseeing ?? "",
+        guide: d.guide ?? "",
         included: d.included ?? "",
         excluded: d.excluded ?? "",
+        audience: d.audience ?? "",
+        insurance: d.insurance ?? "",
+        terms: d.terms ?? "",
+        contactInfo: d.contactInfo ?? "",
         paymentTerms: d.paymentTerms ?? "",
         cancellationPolicy: d.cancellationPolicy ?? "",
         applicationConditions: d.applicationConditions ?? "",
@@ -143,6 +167,14 @@ export function AdminTours() {
       setFieldError("Vui lòng chọn điểm đến.");
       return false;
     }
+    if (form.startDate && form.endDate && new Date(form.startDate) >= new Date(form.endDate)) {
+      setFieldError("Ngày bắt đầu phải trước ngày kết thúc.");
+      return false;
+    }
+    if (form.status === "Published" && (!form.startDate || !form.endDate)) {
+      setFieldError("Tour đang bán phải có ngày bắt đầu và ngày kết thúc.");
+      return false;
+    }
     setFieldError("");
     return true;
   }
@@ -150,24 +182,47 @@ export function AdminTours() {
   async function saveTour() {
     if (!validate()) return;
     setSaving(true);
-    // Validate độ dài nội dung trùng BE (dài ≤10000).
+    // Validate độ dài nội dung trùng BE (ngắn ≤500, dài ≤10000).
     const longs: [string, string | null | undefined][] = [
+      ["Lịch trình", form.itinerary], ["Bữa ăn", form.meals], ["Tham quan", form.sightseeing],
       ["Bao gồm", form.included], ["Không bao gồm", form.excluded],
+      ["Bảo hiểm", form.insurance], ["Điều kiện", form.terms],
     ];
     for (const [name, v] of longs)
       if ((v?.trim().length ?? 0) > 10000) {
         setFieldError(`${name} tối đa 10000 ký tự.`);
         return;
       }
+    const shorts: [string, string | null | undefined][] = [
+      ["Tuyến đường", form.route], ["Di chuyển", form.transport], ["Lưu trú", form.accommodation],
+      ["Hướng dẫn viên", form.guide], ["Đối tượng", form.audience], ["Thông tin liên hệ", form.contactInfo],
+    ];
+    for (const [name, v] of shorts)
+      if ((v?.trim().length ?? 0) > 500) {
+        setFieldError(`${name} tối đa 500 ký tự.`);
+        return;
+      }
     const opt = (v: string | null | undefined) => (v?.trim() ? v.trim() : null);
-    // date-only -> UTC, rỗng -> null.
+    // datetime-local -> ISO UTC, rỗng -> null.
     const body: TourForm = {
       ...form,
-      departureDate: form.departureDate ? new Date(`${form.departureDate}T00:00:00Z`).toISOString() : null,
+      startDate: fromLocalInput(form.startDate),
+      endDate: fromLocalInput(form.endDate),
       departureLocation: opt(form.departureLocation),
       duration: opt(form.duration),
+      route: opt(form.route),
+      itinerary: opt(form.itinerary),
+      transport: opt(form.transport),
+      accommodation: opt(form.accommodation),
+      meals: opt(form.meals),
+      sightseeing: opt(form.sightseeing),
+      guide: opt(form.guide),
       included: opt(form.included),
       excluded: opt(form.excluded),
+      audience: opt(form.audience),
+      insurance: opt(form.insurance),
+      terms: opt(form.terms),
+      contactInfo: opt(form.contactInfo),
       paymentTerms: opt(form.paymentTerms),
       cancellationPolicy: opt(form.cancellationPolicy),
       applicationConditions: opt(form.applicationConditions),
@@ -383,9 +438,12 @@ export function AdminTours() {
               <Field label="Số chỗ tối đa">
                 <Input type="number" min={1} placeholder="VD: 30" value={form.maxSeats} onChange={(e) => setForm({ ...form, maxSeats: Number(e.target.value) })} />
               </Field>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <Field label="Ngày khởi hành">
-                  <Input type="date" value={form.departureDate ?? ""} onChange={(e) => setForm({ ...form, departureDate: e.target.value || null })} />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field label="Ngày & giờ bắt đầu (khởi hành)">
+                  <Input type="datetime-local" value={form.startDate ?? ""} onChange={(e) => setForm({ ...form, startDate: e.target.value || null })} />
+                </Field>
+                <Field label="Ngày & giờ kết thúc">
+                  <Input type="datetime-local" value={form.endDate ?? ""} onChange={(e) => setForm({ ...form, endDate: e.target.value || null })} />
                 </Field>
                 <Field label="Địa điểm xuất phát">
                   <Input placeholder="VD: TP. Hồ Chí Minh" value={form.departureLocation ?? ""} onChange={(e) => setForm({ ...form, departureLocation: e.target.value || null })} />
@@ -472,6 +530,27 @@ export function AdminTours() {
                   </div>
                 ))}
               </div>
+              <Field label="Tuyến đường">
+                <Textarea rows={2} placeholder="VD: Hà Nội → Hạ Long → Hang Sửng Sốt" value={form.route ?? ""} onChange={(e) => setForm({ ...form, route: e.target.value || null })} />
+              </Field>
+              <Field label="Lịch trình tổng quan">
+                <Textarea rows={3} placeholder="Mô tả lịch trình chung..." value={form.itinerary ?? ""} onChange={(e) => setForm({ ...form, itinerary: e.target.value || null })} />
+              </Field>
+              <Field label="Di chuyển">
+                <Textarea rows={2} placeholder="VD: Xe giường nằm, du thuyền, cáp treo" value={form.transport ?? ""} onChange={(e) => setForm({ ...form, transport: e.target.value || null })} />
+              </Field>
+              <Field label="Lưu trú">
+                <Textarea rows={2} placeholder="VD: Khách sạn 4 sao trung tâm" value={form.accommodation ?? ""} onChange={(e) => setForm({ ...form, accommodation: e.target.value || null })} />
+              </Field>
+              <Field label="Bữa ăn">
+                <Textarea rows={2} placeholder="VD: 01 bữa sáng + 02 bữa chính" value={form.meals ?? ""} onChange={(e) => setForm({ ...form, meals: e.target.value || null })} />
+              </Field>
+              <Field label="Tham quan">
+                <Textarea rows={2} placeholder="VD: Vịnh Hạ Long, Hang Sửng Sốt" value={form.sightseeing ?? ""} onChange={(e) => setForm({ ...form, sightseeing: e.target.value || null })} />
+              </Field>
+              <Field label="Hướng dẫn viên">
+                <Textarea rows={2} placeholder="VD: HDV tiếng Việt suốt tuyến" value={form.guide ?? ""} onChange={(e) => setForm({ ...form, guide: e.target.value || null })} />
+              </Field>
               <Field label="Bao gồm">
                 <Textarea rows={3} placeholder="VD: Xe, khách sạn, ăn uống, vé, bảo hiểm..." value={form.included ?? ""} onChange={(e) => setForm({ ...form, included: e.target.value || null })} />
               </Field>
@@ -486,6 +565,18 @@ export function AdminTours() {
               </Field>
               <Field label="Điều kiện áp dụng">
                 <Textarea rows={2} placeholder="VD: Trẻ em dưới 5 tuổi miễn phí; từ 12 tuổi tính giá người lớn" value={form.applicationConditions ?? ""} onChange={(e) => setForm({ ...form, applicationConditions: e.target.value || null })} />
+              </Field>
+              <Field label="Đối tượng phù hợp">
+                <Textarea rows={2} placeholder="VD: Gia đình, cặp đôi, người lớn tuổi" value={form.audience ?? ""} onChange={(e) => setForm({ ...form, audience: e.target.value || null })} />
+              </Field>
+              <Field label="Bảo hiểm">
+                <Textarea rows={2} placeholder="VD: Bảo hiểm du lịch toàn tuyến" value={form.insurance ?? ""} onChange={(e) => setForm({ ...form, insurance: e.target.value || null })} />
+              </Field>
+              <Field label="Điều kiện (đặt cọc, hủy, đổi lịch)">
+                <Textarea rows={2} placeholder="VD: Cọc 30%; hủy trước 5 ngày..." value={form.terms ?? ""} onChange={(e) => setForm({ ...form, terms: e.target.value || null })} />
+              </Field>
+              <Field label="Thông tin liên hệ">
+                <Textarea rows={2} placeholder="VD: Hotline 1900 1888; HDV 0912 345 678" value={form.contactInfo ?? ""} onChange={(e) => setForm({ ...form, contactInfo: e.target.value || null })} />
               </Field>
               <FieldError message={fieldError} />
               <Button onClick={saveTour} loading={saving}>Lưu tour</Button>

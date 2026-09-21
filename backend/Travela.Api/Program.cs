@@ -36,6 +36,8 @@ builder.Services.AddScoped<AdminStatsService>();
 builder.Services.AddScoped<SupportService>();
 // BE-03: job nền dọn refresh token hết hạn/đã thu hồi quá lâu.
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
+// D6: job nền tự chuyển trạng thái tour/booking theo ngày (chỉ từ Confirmed).
+builder.Services.AddHostedService<BookingLifecycleService>();
 
 // Fail-fast JWT ở Production (H13): thiếu/ngắn secret thì không cho chạy prod.
 var jwtSecret = builder.Configuration["JWT_SECRET"]

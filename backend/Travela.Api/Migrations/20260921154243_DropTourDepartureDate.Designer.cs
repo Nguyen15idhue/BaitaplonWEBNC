@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Travela.Api.Data;
 
@@ -11,9 +12,11 @@ using Travela.Api.Data;
 namespace Travela.Api.Migrations
 {
     [DbContext(typeof(TravelaDbContext))]
-    partial class TravelaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921154243_DropTourDepartureDate")]
+    partial class DropTourDepartureDate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -78,10 +81,6 @@ namespace Travela.Api.Migrations
                     b.Property<DateTime>("BookingDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("ContactAddress")
-                        .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
-
                     b.Property<string>("ContactEmail")
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
@@ -95,9 +94,6 @@ namespace Travela.Api.Migrations
                         .HasColumnType("varchar(20)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("DepartureDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Note")

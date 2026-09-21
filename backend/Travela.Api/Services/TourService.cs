@@ -94,12 +94,13 @@ public class TourService
     {
         ValidateTour(req);
         await RequireDestinationAsync(req.DestinationId);
+        await EnsurePublishableAsync(req, null);
         var t = new Tour
         {
             TourName = req.TourName.Trim(), Description = req.Description?.Trim() ?? string.Empty,
             DestinationId = req.DestinationId, MaxSeats = req.MaxSeats, Status = req.Status,
             StartDate = req.StartDate, EndDate = req.EndDate,
-            DepartureDate = req.DepartureDate, DepartureLocation = req.DepartureLocation?.Trim(),
+            DepartureLocation = req.DepartureLocation?.Trim(),
             Duration = req.Duration?.Trim(),
             Route = Norm(req.Route), Itinerary = Norm(req.Itinerary),
             Transport = Norm(req.Transport), Accommodation = Norm(req.Accommodation),
@@ -124,6 +125,7 @@ public class TourService
         await RequireDestinationAsync(req.DestinationId);
         var t = await _db.Tours.FindAsync(id)
             ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy tour.");
+        await EnsurePublishableAsync(req, id);
         // N05: không cho hạ MaxSeats dưới số đã bán (trừ Cancelled).
         var sold = await _db.Bookings.Where(b => b.TourId == id && b.Status != "Cancelled")
             .SumAsync(b => (int?)b.Quantity) ?? 0;
@@ -138,7 +140,6 @@ public class TourService
         t.Status = req.Status;
         t.StartDate = req.StartDate;
         t.EndDate = req.EndDate;
-        t.DepartureDate = req.DepartureDate;
         t.DepartureLocation = req.DepartureLocation?.Trim();
         t.Duration = req.Duration?.Trim();
         t.Route = Norm(req.Route); t.Itinerary = Norm(req.Itinerary);
@@ -397,6 +398,21 @@ public class TourService
                 throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", $"{name} tối đa 10000 ký tự.");
     }
 
+    // Chặn publish tour thiếu ngày hoặc chưa có giá hiệu lực (tránh khách gặp 422 khi đặt).
+    private async Task EnsurePublishableAsync(CreateTourRequest req, int? tourId)
+    {
+        if (req.Status != "Published") return;
+        if (!req.StartDate.HasValue || !req.EndDate.HasValue)
+            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR",
+                "Tour Published phải có ngày bắt đầu và ngày kết thúc.");
+        var prices = tourId.HasValue
+            ? await _db.Prices.AsNoTracking().Where(p => p.TourId == tourId.Value).ToListAsync()
+            : new List<Price>();
+        if (PricingHelper.EffectiveMin(prices, DateTime.UtcNow) <= 0)
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "PRICE_NOT_AVAILABLE",
+                "Tour Published phải có ít nhất một giá hiệu lực.");
+    }
+
     private static string? Norm(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private static void ValidatePrice(CreatePriceRequest req)
@@ -438,7 +454,6 @@ public class TourService
             AvailableSeats = Math.Max(0, t.MaxSeats - booked),
             StartDate = t.StartDate,
             EndDate = t.EndDate,
-            DepartureDate = t.DepartureDate,
             DepartureLocation = t.DepartureLocation,
             Duration = t.Duration
         };
@@ -453,7 +468,7 @@ public class TourService
             Destination = list.Destination, Status = list.Status,
             MaxSeats = list.MaxSeats, BookedSeats = list.BookedSeats, AvailableSeats = list.AvailableSeats,
             StartDate = list.StartDate, EndDate = list.EndDate,
-            DepartureDate = t.DepartureDate, DepartureLocation = t.DepartureLocation, Duration = t.Duration,
+            DepartureLocation = t.DepartureLocation, Duration = t.Duration,
             Description = t.Description, DestinationId = t.DestinationId,
             Route = t.Route, Itinerary = t.Itinerary,
             Transport = t.Transport, Accommodation = t.Accommodation,

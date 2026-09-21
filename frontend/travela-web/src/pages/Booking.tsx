@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button";
 import { Input, Textarea, FieldError } from "../components/ui/fields";
 import { SafeImage } from "../components/common/SafeImage";
 import { useToast, toastForApiError } from "../components/ui/toast";
-import { formatVND } from "../lib/format";
+import { formatVND, formatDateTime } from "../lib/format";
 import { Minus, Plus } from "lucide-react";
 
 export function BookingPage() {
@@ -95,7 +95,6 @@ export function BookingPage() {
     setFieldError("");
     setSubmitting(true);
     try {
-      const contactNote = [address.trim(), note.trim()].filter(Boolean).join(" | ");
       const booking = await createBooking({
         tourId: current.id,
         adultQty,
@@ -104,7 +103,8 @@ export function BookingPage() {
         contactName: fullName.trim(),
         contactEmail: email.trim(),
         contactPhone: phone.trim(),
-        note: contactNote || undefined,
+        contactAddress: address.trim() || undefined,
+        note: note.trim() || undefined,
       });
       sessionStorage.setItem(`booked_${tourId}`, String(booking.id));
       push("Đặt tour thành công.", "success");
@@ -196,6 +196,7 @@ export function BookingPage() {
           </div>
           <p className="mb-1 text-sm font-bold text-[#535041]">{tour.tourName}</p>
           {tour.duration && <p className="text-xs text-[#535041]">Thời gian: {tour.duration}</p>}
+          {tour.startDate && <p className="text-xs text-[#535041]">Khởi hành: {formatDateTime(tour.startDate)}</p>}
           {tour.departureLocation && <p className="text-xs text-[#535041]">Địa điểm: {tour.departureLocation}</p>}
 
           <div className="my-4 border-t border-[#A79F84]/30" />

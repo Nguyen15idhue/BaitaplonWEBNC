@@ -12,6 +12,7 @@ export interface CreateBookingInput {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  contactAddress?: string;
   note?: string;
   paymentMethod?: string;
 }

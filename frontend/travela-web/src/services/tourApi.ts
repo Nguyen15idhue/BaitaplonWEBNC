@@ -61,18 +61,30 @@ export async function getHealth(): Promise<{ status: string; db: string; time: s
 }
 
 // Admin (B3): CRUD tour + giá + ảnh. Validate FE trùng BE.
-// Union haianh (startDate/endDate) + main (departure*) — khớp CreateTourRequest BE.
+// Khớp CreateTourRequest BE: 2 mốc thời gian (start/end) + nội dung chi tiết.
 export interface TourForm {
   tourName: string;
   description: string;
   destinationId: number;
   maxSeats: number;
   status?: string;
-  departureDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   departureLocation?: string | null;
   duration?: string | null;
+  route?: string | null;
+  itinerary?: string | null;
+  transport?: string | null;
+  accommodation?: string | null;
+  meals?: string | null;
+  sightseeing?: string | null;
+  guide?: string | null;
   included?: string | null;
   excluded?: string | null;
+  audience?: string | null;
+  insurance?: string | null;
+  terms?: string | null;
+  contactInfo?: string | null;
   // Redesign fields.
   paymentTerms?: string | null;
   cancellationPolicy?: string | null;

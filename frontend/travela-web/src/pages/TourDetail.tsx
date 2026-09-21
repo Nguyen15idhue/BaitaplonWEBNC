@@ -4,7 +4,7 @@ import { getTourDetail } from "../services/tourApi";
 import type { TourDetail, ItineraryDay } from "../types";
 import { Loading, ErrorState } from "../components/common/common";
 import { SafeImage } from "../components/common/SafeImage";
-import { formatVND } from "../lib/format";
+import { formatVND, formatDateTime } from "../lib/format";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Utensils } from "lucide-react";
 
 export function TourDetailPage() {
@@ -89,10 +89,16 @@ export function TourDetailPage() {
                   <span className="font-medium text-[#535041]">Mã tour:</span>
                   <span className="text-[#535041]">NDSGN{tour.id.toString().padStart(4, "0")}</span>
                 </div>
-                {tour.departureDate && (
+                {tour.startDate && (
                   <div className="flex gap-2">
                     <span className="font-medium text-[#535041]">Khởi hành:</span>
-                    <span className="text-[#535041]">{new Date(tour.departureDate).toLocaleDateString("vi-VN")}</span>
+                    <span className="text-[#535041]">{formatDateTime(tour.startDate)}</span>
+                  </div>
+                )}
+                {tour.endDate && (
+                  <div className="flex gap-2">
+                    <span className="font-medium text-[#535041]">Kết thúc:</span>
+                    <span className="text-[#535041]">{formatDateTime(tour.endDate)}</span>
                   </div>
                 )}
                 {tour.departureLocation && (

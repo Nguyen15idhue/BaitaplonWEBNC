@@ -258,3 +258,36 @@
 | Playwright UI | PASS | 5/5 | `e2e/ui.spec.ts` |
 
 **Ghi chú:** Test FE dùng Playwright tại `e2e/` (chạy với Docker đang bật: FE `:3001`, BE `:5000`). Tổng đợt: 12/12 PASS (7 API + 5 UI), chạy lại trên DB fresh vẫn 12/12.
+
+---
+
+## Đợt 3 (2026-09-21) — hoàn thiện luồng đăng ký tour (ngày+giờ, địa chỉ)
+
+Kế hoạch: `docs/2/KE-HOACH-DANG-KY-TOUR.md` (Phase 1-2).
+
+### File đã tạo/sửa
+
+| File | Hành động | Nội dung chính | Trạng thái |
+|---|---|---|---|
+| `src/lib/format.ts` | Sửa | Thêm `formatDateTime`, `toLocalInput`, `fromLocalInput` (ngày + giờ) | ☑ |
+| `src/services/tourApi.ts` | Sửa | `TourForm` thêm `startDate/endDate` + 11 trường nội dung; bỏ `departureDate` | ☑ |
+| `src/pages/admin/Tours.tsx` | Sửa | Input `datetime-local` cho bắt đầu/kết thúc; 11 trường nội dung; validate ngày + độ dài | ☑ |
+| `src/types/index.ts` | Sửa | `Tour` bỏ `departureDate`; `Booking` thêm `departureDate/contactAddress` | ☑ |
+| `src/services/bookingApi.ts` | Sửa | `CreateBookingInput` thêm `contactAddress` | ☑ |
+| `src/pages/Booking.tsx` | Sửa | Gửi `contactAddress` tách khỏi `note`; hiển thị giờ khởi hành | ☑ |
+| `src/pages/Checkout.tsx`, `MyBookings.tsx`, `admin/Bookings.tsx` | Sửa | Hiển thị giờ khởi hành + địa chỉ liên hệ | ☑ |
+| `src/pages/TourDetail.tsx`, `components/common/TourCard.tsx` | Sửa | Hiển thị "Khởi hành"/"Kết thúc" kèm giờ từ `startDate/endDate` | ☑ |
+
+### Kết quả test
+
+| Checklist | PASS/FAIL | Evidence | Ghi chú |
+|---|---|---|---|
+| `npm run build` | PASS | TS sạch | — |
+| Admin sửa tour | PASS | Lưu giữ ngày+giờ; `start>=end` chặn 400; 11 trường lưu đủ | API `PUT /api/tours/1` 200 |
+| Khách đặt tour | PASS | Tiền hiển thị == `checkout.amount`; contact/địa chỉ lưu và xem lại được | AmountMatch: True |
+| Hiển thị ngày+giờ | PASS | `formatDateTime` ở TourCard/TourDetail/Booking/Checkout/MyBookings/admin | — |
+| Playwright UI | PASS | 5/5 | `e2e/ui.spec.ts` |
+| Flow lifecycle E2E (UI + auto) | PASS | Khách đặt → Paid → admin Confirmed → auto Ongoing → auto Completed; tour Hidden; tracking 5 mốc + audit system | `e2e/booking-lifecycle.spec.ts` |
+| Tổng Playwright | PASS | 13/13 (7 API + 1 lifecycle + 5 UI) | DB fresh vẫn 13/13 |
+
+**Ghi chú:** Giao diện giữ đúng design-system, không thêm gradient/kiểu mới. Chưa push git.

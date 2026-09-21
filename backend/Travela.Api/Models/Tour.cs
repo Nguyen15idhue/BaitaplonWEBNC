@@ -10,11 +10,10 @@ public class Tour
     public int MaxSeats { get; set; }
     public string Status { get; set; } = "Draft";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    // A4: ngày bắt đầu/kết thúc (nullable để tương thích tour cũ/seed).
+    // A4: ngày bắt đầu (kiêm khởi hành) / kết thúc, kèm giờ (nullable để tương thích tour cũ/seed).
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     // Main: thông tin khởi hành hiển thị (nullable để tương thích tour cũ/seed).
-    public DateTime? DepartureDate { get; set; }
     public string? DepartureLocation { get; set; }
     public string? Duration { get; set; }
     // Nội dung chi tiết tour (nullable để tương thích tour cũ/seed).

@@ -26,10 +26,10 @@
 - [x] GET /api/auth/me — user Locked → 401 ngay (lock hiệu lực tức thì)
 
 ## Tours / Prices / Images
-- [x] GET /api/tours (chỉ Published + filter/sort/page, kèm priceFrom + bookedSeats/availableSeats + startDate/endDate + departureDate/departureLocation/duration)
+- [x] GET /api/tours (chỉ Published + filter/sort/page, kèm priceFrom + bookedSeats/availableSeats + startDate/endDate kèm giờ + departureLocation/duration)
 - [x] GET /api/tours/{id} (public: chỉ Published; Admin xem được Draft/Hidden)
 - [x] GET /api/tours/all (Admin + filter status/sort/minPrice/maxPrice)
-- [x] POST/PUT/DELETE /api/tours/{id} (Admin, có booking thì Hidden; hạ MaxSeats dưới số đã bán → 422; StartDate phải < EndDate; nội dung chi tiết: route/itinerary/transport/accommodation/meals/sightseeing/guide/included/excluded/audience/insurance/terms/contactInfo, ngắn ≤500, dài ≤10000)
+- [x] POST/PUT/DELETE /api/tours/{id} (Admin, có booking thì Hidden; hạ MaxSeats dưới số đã bán → 422; StartDate phải < EndDate; Status=Published bắt buộc có start/end + ít nhất 1 giá hiệu lực, thiếu ngày → 400, thiếu giá → 422 PRICE_NOT_AVAILABLE; nội dung chi tiết: route/itinerary/transport/accommodation/meals/sightseeing/guide/included/excluded/audience/insurance/terms/contactInfo, ngắn ≤500, dài ≤10000)
 - [x] GET /api/tours/{id}/prices — chỉ giá hiệu lực mới nhất từng nguồn
 - [x] POST /api/tours/{id}/prices, PUT/DELETE /api/prices/{id} (Admin)
 - [x] POST /api/tours/{id}/images (Admin, JSON imageUrl http/https, tối đa 10 ảnh), POST /api/tours/{id}/images/upload (Admin, multipart file ảnh ≤5MB: jpg/png/webp/gif, lưu /uploads), DELETE /api/images/{id} (Admin, ảnh upload cũng xóa file vật lý)
@@ -39,7 +39,8 @@
 - [x] POST/PUT/DELETE /api/destinations (Admin)
 
 ## Bookings / Checkouts
-- [x] POST /api/bookings (1 transaction Booking+Checkout, chỉ Mock, tour không giá → 422, tour quá EndDate → 400 TOUR_ENDED; header `Idempotency-Key` optional chống trùng đơn). Body: `{ tourId, adultQty, childQty, supplementQty, contactName?, contactEmail?, contactPhone?, note? }`; server tính tiền từ giá hiệu lực theo từng nguồn (Người lớn/Trẻ em/Phụ thu). Vẫn nhận `{ tourId, quantity }` legacy (dùng giá min).
+- [x] POST /api/bookings (1 transaction Booking+Checkout, chỉ Mock, tour không giá → 422, tour quá EndDate → 400 TOUR_ENDED; nhận breakdown loại khách + `contactName/contactEmail/contactPhone/contactAddress/note`; `departureDate` do server snapshot từ `tour.startDate`; header `Idempotency-Key` optional chống trùng đơn)
+- [x] Auto lifecycle (job nền): tour Published qua EndDate → Hidden; booking `Confirmed → Ongoing` khi tới mốc khởi hành, `Ongoing → Completed` khi tới EndDate (chỉ từ Confirmed, actor `system`, có tracking + audit). Body: `{ tourId, adultQty, childQty, supplementQty, contactName?, contactEmail?, contactPhone?, note? }`; server tính tiền từ giá hiệu lực theo từng nguồn (Người lớn/Trẻ em/Phụ thu). Vẫn nhận `{ tourId, quantity }` legacy (dùng giá min).
 - [x] GET /api/bookings, GET /api/bookings/{id}
 - [x] POST /api/bookings/{id}/pay (chủ đơn hoặc Admin, chỉ từ PendingPayment)
 - [x] PUT /api/bookings/{id}/status (chỉ Admin) — hủy đồng thời checkout → Refunded; concurrent → 409 CONCURRENT_UPDATE

@@ -13,6 +13,7 @@ public class CreateBookingRequest
     public string? ContactName { get; set; }
     public string? ContactEmail { get; set; }
     public string? ContactPhone { get; set; }
+    public string? ContactAddress { get; set; }
     public string? Note { get; set; }
 }
 
@@ -49,9 +50,11 @@ public class BookingDto
     public int Quantity { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime BookingDate { get; set; }
+    public DateTime? DepartureDate { get; set; }
     public string? ContactName { get; set; }
     public string? ContactEmail { get; set; }
     public string? ContactPhone { get; set; }
+    public string? ContactAddress { get; set; }
     public string? Note { get; set; }
     public List<TrackingStepDto> Tracking { get; set; } = new();
     public CheckoutDto? Checkout { get; set; }
