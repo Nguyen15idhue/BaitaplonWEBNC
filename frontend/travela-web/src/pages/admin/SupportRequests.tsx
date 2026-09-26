@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminListSupports, getSupport, updateSupportStatus } from "../../services/supportApi";
 import type { SupportRequest } from "../../types";
-import { Loading, EmptyState, ErrorState, PageHeader, Pagination } from "../../components/common/common";
+import { Loading, LoadingBar, EmptyState, ErrorState, PageHeader, Pagination } from "../../components/common/common";
 import { Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
@@ -96,6 +96,7 @@ export function AdminSupports() {
   return (
     <div>
       <PageHeader title="Yêu cầu hỗ trợ" />
+      <LoadingBar active={loading && items.length > 0} />
       <div className="mb-4 grid max-w-2xl grid-cols-1 gap-2 md:grid-cols-2">
         <Field label="Trạng thái">
           <Select value={status} onChange={(e) => changeStatus(e.target.value)}>
@@ -122,14 +123,14 @@ export function AdminSupports() {
         </Field>
       </div>
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <Loading />
       ) : error ? (
         <ErrorState message={error} />
       ) : items.length === 0 ? (
         <EmptyState message="Chưa có yêu cầu hỗ trợ." />
       ) : (
-        <>
+        <div>
           <Table headers={["Mã", "Người gửi", "Email", "Chủ đề", "Trạng thái", "Ngày gửi", "Thao tác"]}>
             {items.map((s) => (
               <tr key={s.id} className="border-b border-[#E2E8F0]">
@@ -150,7 +151,7 @@ export function AdminSupports() {
             ))}
           </Table>
           <Pagination page={page} pageSize={pageSize} total={total} onPage={(p) => load(p, status, search)} />
-        </>
+        </div>
       )}
 
       <Dialog open={!!detail} title={`Yêu cầu #${detail?.id}`} onClose={() => setDetail(null)}>

@@ -124,7 +124,7 @@ export function AdminSettings() {
           {regions[activeRegion].map((item, i) => (
             <div key={i} className="group relative overflow-hidden rounded-lg">
               <img src={item.image} alt={item.name} className="h-36 w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+              <div className="absolute inset-0 bg-black/40" />
               <span className="absolute bottom-2 left-2 text-xs font-semibold text-white">{item.name}</span>
 
               <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">

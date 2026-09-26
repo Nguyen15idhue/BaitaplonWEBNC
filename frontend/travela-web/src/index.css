@@ -12,6 +12,12 @@
   --accent: #A79F84;
 }
 
+/* Giữ chỗ thanh cuộn luôn ổn định: khi kết quả lọc dài/ngắn đổi qua lại,
+   scrollbar không bật/tắt làm toàn trang giật ngang (nguyên nhân gây "nháy"). */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: Inter, system-ui, sans-serif;

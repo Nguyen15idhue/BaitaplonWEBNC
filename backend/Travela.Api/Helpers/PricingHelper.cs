@@ -23,4 +23,16 @@ public static class PricingHelper
         var effective = EffectivePrices(prices, now);
         return effective.Count == 0 ? 0 : effective.Min(p => p.PriceValue);
     }
+
+    // Giá hiệu lực của nguồn khớp đầu tiên (so khớp đã chuẩn hóa). 0 nếu không có nguồn nào.
+    public static decimal EffectiveForSource(IEnumerable<Price> prices, DateTime now, params string[] sources)
+    {
+        var effective = EffectivePrices(prices, now);
+        foreach (var s in sources)
+        {
+            var match = effective.FirstOrDefault(p => NormalizeSource(p.SourceName) == NormalizeSource(s));
+            if (match is not null) return match.PriceValue;
+        }
+        return 0;
+    }
 }

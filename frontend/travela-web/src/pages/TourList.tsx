@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getTours } from "../services/tourApi";
 import type { Tour } from "../types";
-import { Loading, EmptyState, ErrorState, PageHeader, Pagination } from "../components/common/common";
+import { Loading, LoadingBar, EmptyState, ErrorState, PageHeader, Pagination } from "../components/common/common";
 import { TourCard } from "../components/common/TourCard";
 import { Input, Select, Field, FieldError } from "../components/ui/fields";
 import { Button } from "../components/ui/button";
@@ -84,6 +84,7 @@ export function TourList() {
   return (
     <div>
       <PageHeader title="Danh sách tour" />
+      <LoadingBar active={loading && tours.length > 0} />
       <Card className="mb-4">
         <div
           className="grid grid-cols-1 gap-2 md:grid-cols-3"
@@ -130,29 +131,31 @@ export function TourList() {
         <FieldError message={filterError} />
       </Card>
 
-      {loading ? (
-        <Loading />
-      ) : error ? (
-        <ErrorState message={error} />
-      ) : tours.length === 0 ? (
-        <EmptyState
-          message="Không tìm thấy tour phù hợp. Thử nới điều kiện lọc."
-          action={
-            <Button variant="outline" onClick={reset}>
-              Xem tất cả tour
-            </Button>
-          }
-        />
-      ) : (
-        <>
-          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
-            {tours.map((t) => (
-              <TourCard key={t.id} tour={t} />
-            ))}
-          </div>
-          <Pagination page={page} pageSize={pageSize} total={total} onPage={load} />
-        </>
-      )}
+      <div className="min-h-[60vh]">
+        {loading && tours.length === 0 ? (
+          <Loading />
+        ) : error ? (
+          <ErrorState message={error} />
+        ) : tours.length === 0 ? (
+          <EmptyState
+            message="Không tìm thấy tour phù hợp. Thử nới điều kiện lọc."
+            action={
+              <Button variant="outline" onClick={reset}>
+                Xem tất cả tour
+              </Button>
+            }
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
+              {tours.map((t) => (
+                <TourCard key={t.id} tour={t} />
+              ))}
+            </div>
+            <Pagination page={page} pageSize={pageSize} total={total} onPage={load} />
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -179,3 +179,71 @@
 | .env không commit | PASS | Không có file .env, `.env.example` đủ MYSQL_* + JWT_SECRET | `git status` sạch secret |
 
 **Ghi chú:** Swagger có đủ 23 paths (22 API + /health). Không thêm lib mới ở B5 (k6 là tool ngoài). Backend xong toàn bộ B0-B5.
+
+---
+
+## Đợt 2 (2026-09-21) — sửa lỗi hậu merge + bổ sung CRUD user
+
+### File đã tạo/sửa
+
+| File | Hành động | Nội dung chính | Trạng thái |
+|---|---|---|---|
+| `Migrations/20260919041728_AddTourRedesignFields.cs` | Sửa | Bỏ phần trùng `Version`/`idempotency_keys`/check constraint/index với `20260912000002` gây lỗi "Duplicate column" | ☑ |
+| `Program.cs` | Sửa | `MySqlServerVersion(8.4.0)` thay `AutoDetect` (hết crash fresh up); retry migration 40 lần; đăng ký `RefreshTokenCleanupService` | ☑ |
+| `Controllers/DestinationsController.cs`, `Services/DestinationService.cs`, `DTOs/Destination/DestinationDtos.cs` | Tạo lại | Khôi phục API Destinations khớp `docs/api.md` | ☑ |
+| `DTOs/User/UserDtos.cs`, `Services/UserService.cs`, `Controllers/UsersController.cs` | Thêm | CRUD user: `POST /api/users`, `PUT /api/users/{id}`, `DELETE /api/users/{id}` + audit + tự bảo vệ | ☑ |
+| `Models/Booking.cs`, `Data/TravelaDbContext.cs`, `DTOs/Booking/BookingDtos.cs`, `Services/BookingService.cs`, `Helpers/PricingHelper.cs`, migration `AddBookingContactFields` | Thêm | Booking breakdown loại khách + ContactName/Email/Phone/Note; server tính tiền theo nguồn | ☑ |
+| `Services/TourService.cs` | Sửa | `ListAsync` bỏ `Include(Bookings)`, đếm chỗ theo trang | ☑ |
+| `Services/BookingService.cs` | Sửa | Xóa dead code `ToDto(Booking)` | ☑ |
+| `Services/RefreshTokenCleanupService.cs` | Tạo | Job nền dọn refresh token quá hạn (retention 30 ngày) | ☑ |
+| `docs/api.md` | Sửa | CRUD users, body booking mới, regex username, ghi chú job token | ☑ |
+
+### Kết quả test
+
+| Checklist | PASS/FAIL | Evidence | Ghi chú |
+|---|---|---|---|
+| `dotnet build` | PASS | 0 warning / 0 error | — |
+| Docker fresh `down -v && up --build` | PASS | 3 Up, backend `restarts=0`, health db up; migrations 8, tours 12, users 3 | Migration từ đầu chạy sạch |
+| User CRUD API | PASS | create 201, trùng 409, update 200, audit có `User.Create`, delete 200 | Playwright `api.spec.ts` |
+| Booking breakdown | PASS | 2 NL + 1 TE + 1 phụ thu → `checkout.amount` khớp tổng giá hiệu lực; contact lưu đúng | Playwright `api.spec.ts` |
+| RBAC | PASS | me không token 401, customer→users 403, tự khóa 400, giá sai 422, hết chỗ 409 | Playwright `api.spec.ts` |
+| Playwright API | PASS | 7/7 | `e2e/api.spec.ts` |
+
+**Ghi chú:** Test E2E ở `e2e/` (Playwright), chạy `npx playwright test`. Tổng 12/12 PASS (7 API + 5 UI), chạy lại trên DB fresh vẫn 12/12.
+
+---
+
+## Đợt 3 (2026-09-21) — hoàn thiện luồng đăng ký tour + timezone UTC+7
+
+Kế hoạch: `docs/2/KE-HOACH-DANG-KY-TOUR.md` (Phase 0-4).
+
+### File đã tạo/sửa
+
+| File | Hành động | Nội dung chính | Trạng thái |
+|---|---|---|---|
+| `Models/Tour.cs`, `DTOs/Tour/TourDtos.cs`, `Services/TourService.cs`, `Data/DbSeeder.cs` | Sửa | Bỏ `DepartureDate` tour (dùng `startDate` làm mốc bắt đầu/khởi hành kèm giờ) | ☑ |
+| `Services/TourService.cs` | Sửa | `EnsurePublishableAsync`: Published bắt buộc có start/end (400) + ≥1 giá hiệu lực (422) | ☑ |
+| `Migrations/20260921154243_DropTourDepartureDate.cs` | Tạo | DropColumn `tours.DepartureDate` | ☑ |
+| `Models/Booking.cs`, `Data/TravelaDbContext.cs`, `DTOs/Booking/BookingDtos.cs`, `Services/BookingService.cs` | Sửa | Thêm `DepartureDate` (snapshot từ `tour.StartDate`) + `ContactAddress` (300); trả về DTO | ☑ |
+| `Migrations/20260921154957_AddBookingDepartureAndAddress.cs` | Tạo | AddColumn bookings `DepartureDate` + `ContactAddress` | ☑ |
+| `Services/BookingStateMachine.cs` | Tạo | Tách Transitions + CanTransition + AppendStep + ParseSteps dùng chung | ☑ |
+| `Services/BookingLifecycleService.cs` | Tạo | Job nền: tour qua EndDate → Hidden; `Confirmed→Ongoing→Completed` (chỉ từ Confirmed) | ☑ |
+| `Program.cs`, `appsettings.json` | Sửa | Đăng ký hosted service; `Lifecycle:IntervalMinutes=30` | ☑ |
+| `docker-compose*.yml`, `docker/{backend,frontend}/Dockerfile` | Sửa | Timezone UTC+7 (`TZ` + MySQL `--default-time-zone=+07:00`, cài tzdata) | ☑ |
+| `docs/api.md` | Sửa | Contract tours/bookings mới + ghi chú auto lifecycle | ☑ |
+
+### Kết quả test
+
+| Checklist | PASS/FAIL | Evidence | Ghi chú |
+|---|---|---|---|
+| `dotnet build` | PASS | 0 warning / 0 error | — |
+| Docker fresh `down -v && up --build` | PASS | 3 container Up, `/health` db up; tours bỏ DepartureDate, bookings có DepartureDate/ContactAddress | Migration từ đầu sạch |
+| Timezone | PASS | `docker exec` date = `+07`; MySQL `@@global.time_zone=+07:00`, `NOW()` giờ VN | — |
+| Published validation | PASS | thiếu ngày 400; thiếu giá 422 `PRICE_NOT_AVAILABLE`; hợp lệ 200 | — |
+| Booking breakdown | PASS | `checkout.amount=2757500` == tổng giá hiệu lực; `departureDate` == `tour.startDate`; `contactAddress` lưu | AmountMatch: True |
+| Auto lifecycle | PASS | `Confirmed→Ongoing` (tới khởi hành), `Ongoing→Completed` (tới EndDate), tour → Hidden; đơn `Paid` giữ nguyên | tracking + audit actor `system` |
+| RBAC | PASS | 401/403/400/422/409/400 đúng | — |
+| Auto lifecycle E2E | PASS | Playwright `e2e/booking-lifecycle.spec.ts`: Paid → Confirmed → auto Ongoing → auto Completed; tour → Hidden; tracking 5 mốc + audit actor `system` | 47.9s |
+| Playwright | PASS | 13/13 | `e2e/api.spec.ts` + `e2e/booking-lifecycle.spec.ts` + `e2e/ui.spec.ts` |
+
+**Ghi chú:** Rule auto chỉ từ `Confirmed` (D6), `Paid→Confirmed` vẫn admin làm tay. Chưa push git.

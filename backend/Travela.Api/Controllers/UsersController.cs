@@ -27,6 +27,18 @@ public class UsersController : BaseApiController
         return Ok(await _users.ListAsync(page, pageSize, search, role, status));
     }
 
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateUserRequest req)
+    {
+        return StatusCode(201, await _users.CreateAsync(req, CurrentUserId()));
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateUserRequest req)
+    {
+        return Ok(await _users.UpdateAsync(id, req, CurrentUserId()));
+    }
+
     [HttpPut("{id:int}/role")]
     public async Task<IActionResult> UpdateRole(int id, [FromBody] UpdateRoleRequest req)
     {
@@ -37,5 +49,12 @@ public class UsersController : BaseApiController
     public async Task<IActionResult> UpdateLock(int id, [FromBody] UpdateLockRequest req)
     {
         return Ok(await _users.UpdateLockAsync(id, req.Locked, CurrentUserId()));
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        await _users.DeleteAsync(id, CurrentUserId());
+        return Ok(new { message = "Đã xóa user." });
     }
 }

@@ -11,6 +11,14 @@ public class Booking
     public string Status { get; set; } = "PendingPayment";
     public string TrackingTrace { get; set; } = "[]";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // Thông tin liên hệ khách hàng (F2 redesign, nullable để tương thích data cũ).
+    public string? ContactName { get; set; }
+    public string? ContactEmail { get; set; }
+    public string? ContactPhone { get; set; }
+    public string? ContactAddress { get; set; }
+    public string? Note { get; set; }
+    // Mốc khởi hành của tour tại thời điểm đặt (snapshot, kèm giờ).
+    public DateTime? DepartureDate { get; set; }
     // M12: optimistic concurrency cho state machine (tăng mỗi lần đổi trạng thái).
     public long Version { get; set; }
 

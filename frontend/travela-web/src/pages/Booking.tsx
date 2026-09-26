@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button";
 import { Input, Textarea, FieldError } from "../components/ui/fields";
 import { SafeImage } from "../components/common/SafeImage";
 import { useToast, toastForApiError } from "../components/ui/toast";
-import { formatVND } from "../lib/format";
+import { formatVND, formatDateTime } from "../lib/format";
 import { Minus, Plus } from "lucide-react";
 
 export function BookingPage() {
@@ -52,8 +52,8 @@ export function BookingPage() {
   const childPrice = prices.find((p) => p.sourceName.toLowerCase() === "trẻ em");
   const supplementPrice = prices.find((p) => p.sourceName.toLowerCase() === "phụ thu");
 
-  const adultUnit = adultPrice?.priceValue ?? 0;
-  const childUnit = childPrice?.priceValue ?? 0;
+  const adultUnit = adultPrice?.priceValue ?? current.priceFrom ?? 0;
+  const childUnit = childPrice?.priceValue ?? adultUnit;
   const supplementUnit = supplementPrice?.priceValue ?? 0;
   const totalAmount = adultUnit * adultQty + childUnit * childQty + supplementUnit * supplementQty;
   const totalQuantity = adultQty + childQty;
@@ -95,7 +95,17 @@ export function BookingPage() {
     setFieldError("");
     setSubmitting(true);
     try {
-      const booking = await createBooking(current.id, totalQuantity);
+      const booking = await createBooking({
+        tourId: current.id,
+        adultQty,
+        childQty,
+        supplementQty,
+        contactName: fullName.trim(),
+        contactEmail: email.trim(),
+        contactPhone: phone.trim(),
+        contactAddress: address.trim() || undefined,
+        note: note.trim() || undefined,
+      });
       sessionStorage.setItem(`booked_${tourId}`, String(booking.id));
       push("Đặt tour thành công.", "success");
       navigate(`/checkout/${booking.id}`);
@@ -186,6 +196,7 @@ export function BookingPage() {
           </div>
           <p className="mb-1 text-sm font-bold text-[#535041]">{tour.tourName}</p>
           {tour.duration && <p className="text-xs text-[#535041]">Thời gian: {tour.duration}</p>}
+          {tour.startDate && <p className="text-xs text-[#535041]">Khởi hành: {formatDateTime(tour.startDate)}</p>}
           {tour.departureLocation && <p className="text-xs text-[#535041]">Địa điểm: {tour.departureLocation}</p>}
 
           <div className="my-4 border-t border-[#A79F84]/30" />

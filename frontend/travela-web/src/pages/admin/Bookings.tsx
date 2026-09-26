@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { adminListBookings, getBooking, updateBookingStatus } from "../../services/bookingApi";
 import { listAuditLogs, type AuditLog } from "../../services/auditApi";
 import type { Booking } from "../../types";
-import { Loading, EmptyState, ErrorState, PageHeader, Pagination } from "../../components/common/common";
+import { Loading, LoadingBar, EmptyState, ErrorState, PageHeader, Pagination } from "../../components/common/common";
 import { Card, Badge } from "../../components/ui/card";
 import { Table } from "../../components/ui/table";
 import { Button } from "../../components/ui/button";
 import { Select, Input, Field } from "../../components/ui/fields";
 import { Dialog } from "../../components/ui/dialog";
 import { useToast, toastForApiError } from "../../components/ui/toast";
-import { formatVND, bookingTone } from "../../lib/format";
+import { formatVND, bookingTone, formatDateTime } from "../../lib/format";
 import { label, BOOKING_STATUS_LABEL } from "../../lib/labels";
 
 const STATUSES = ["", "PendingPayment", "Paid", "Confirmed", "Ongoing", "Completed", "Cancelled"];
@@ -93,6 +93,7 @@ export function AdminBookings() {
   return (
     <div>
       <PageHeader title="Quản lý đơn đặt" />
+      <LoadingBar active={loading && items.length > 0} />
       <div className="mb-4 max-w-xs">
         <Field label="Trạng thái">
           <Select value={status} onChange={(e) => changeStatus(e.target.value)}>
@@ -106,14 +107,14 @@ export function AdminBookings() {
         </Field>
       </div>
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <Loading />
       ) : error ? (
         <ErrorState message={error} />
       ) : items.length === 0 ? (
         <EmptyState message="Không có booking." />
       ) : (
-        <>
+        <div>
           <Table headers={["Mã", "Tour", "Khách", "SL", "Tiền", "Trạng thái", "Thao tác"]}>
             {items.map((b) => (
               <tr key={b.id} className="border-b border-[#E2E8F0]">
@@ -134,7 +135,7 @@ export function AdminBookings() {
             ))}
           </Table>
           <Pagination page={page} pageSize={pageSize} total={total} onPage={(p) => load(p, status)} />
-        </>
+        </div>
       )}
 
       <Dialog open={!!detail} title={`Booking #${detail?.id}`} onClose={() => setDetail(null)}>
@@ -143,6 +144,10 @@ export function AdminBookings() {
             <p>
               Tour: {detail.tourName} · User: {detail.username} · SL: {detail.quantity}
             </p>
+            {detail.departureDate && <p>Khởi hành: {formatDateTime(detail.departureDate)}</p>}
+            {detail.contactName && <p>Người đặt: {detail.contactName} · {detail.contactEmail} · {detail.contactPhone}</p>}
+            {detail.contactAddress && <p>Địa chỉ: {detail.contactAddress}</p>}
+            {detail.note && <p>Ghi chú: {detail.note}</p>}
             <p>
               Trạng thái: <Badge tone={bookingTone(detail.status)}>{label(BOOKING_STATUS_LABEL, detail.status)}</Badge>
             </p>

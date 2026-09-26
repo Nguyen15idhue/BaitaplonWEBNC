@@ -14,6 +14,7 @@ services:
       - /src/obj
     command: dotnet watch run --urls http://+:8080
     environment:
+      TZ: Asia/Ho_Chi_Minh
       DOTNET_WATCH_RESTART_ON_RUDE_EDIT: "true"
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
 
@@ -24,8 +25,9 @@ services:
     volumes:
       - ./frontend/travela-web:/app
       - /app/node_modules
-    command: sh -c "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 5173"
+    command: sh -c "apk add --no-cache tzdata >/dev/null 2>&1; npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0 --port 5173"
     environment:
+      TZ: Asia/Ho_Chi_Minh
       VITE_API_PROXY: http://backend:8080
       CHOKIDAR_USEPOLLING: "true"
     # Host dùng 5175 vì 5173/3000/3306 đã bị project khác giữ trên máy này.

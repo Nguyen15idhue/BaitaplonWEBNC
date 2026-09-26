@@ -3,13 +3,17 @@ services:
     image: mysql:8.4
     container_name: travela-mysql
     restart: unless-stopped
+    # Timezone Việt Nam (UTC+7) cho container + server MySQL.
     environment:
+      TZ: Asia/Ho_Chi_Minh
       MYSQL_DATABASE: ${MYSQL_DATABASE:-travela}
       MYSQL_USER: ${MYSQL_USER:-travela}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-travela_password}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
     volumes:
       - mysql_data:/var/lib/mysql
+    # Timezone Việt Nam (UTC+7) cho phiên server MySQL.
+    command: --default-time-zone=+07:00
     # N15: chỉ expose khi dev; prod đóng port bằng profile hoặc override.
     ports:
       - "3307:3306"
@@ -32,6 +36,7 @@ services:
     container_name: travela-backend
     restart: unless-stopped
     environment:
+      TZ: Asia/Ho_Chi_Minh
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=${MYSQL_DATABASE:-travela};User=${MYSQL_USER:-travela};Password=${MYSQL_PASSWORD:-travela_password}"
@@ -55,6 +60,8 @@ services:
       dockerfile: docker/frontend/Dockerfile
     container_name: travela-frontend
     restart: unless-stopped
+    environment:
+      TZ: Asia/Ho_Chi_Minh
     depends_on:
       backend:
         condition: service_healthy

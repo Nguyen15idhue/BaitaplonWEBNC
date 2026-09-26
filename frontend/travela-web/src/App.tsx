@@ -20,7 +20,6 @@ import { AuditLogs } from "./pages/admin/AuditLogs";
 import { AdminSettings } from "./pages/admin/Settings";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
-import { ForgotPassword } from "./pages/ForgotPassword";
 import { Contact } from "./pages/Contact";
 
 export default function App() {
@@ -32,7 +31,6 @@ export default function App() {
             {/* Auth pages — no header/footer */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
 
             {/* Main pages — with header/footer */}
             <Route element={<AppLayout />}>

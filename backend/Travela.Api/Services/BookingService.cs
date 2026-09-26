@@ -25,16 +25,6 @@ public class BookingService
         PropertyNameCaseInsensitive = true
     };
 
-    private static readonly Dictionary<string, string[]> Transitions = new()
-    {
-        ["PendingPayment"] = ["Paid", "Cancelled"],
-        ["Paid"] = ["Confirmed", "Cancelled"],
-        ["Confirmed"] = ["Ongoing", "Cancelled"],
-        ["Ongoing"] = ["Completed", "Cancelled"],
-        ["Completed"] = [],
-        ["Cancelled"] = [],
-    };
-
     public BookingService(TravelaDbContext db, AuditLogService audit, ILogger<BookingService> logger)
     {
         _db = db;
@@ -46,8 +36,7 @@ public class BookingService
     {
         if (req is null)
             throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Thiếu dữ liệu đặt tour.");
-        if (req.Quantity <= 0)
-            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Số lượng phải lớn hơn 0.");
+        // Số lượng kiểm tra theo breakdown (hoặc Quantity legacy) trong TryCreateAsync.
         // C04: V1 chỉ Mock, chặn Card/Transfer tạo Paid giả.
         if (req.PaymentMethod != "Mock")
             throw new AppException(HttpStatusCode.UnprocessableEntity, "UNSUPPORTED_PAYMENT_METHOD",
@@ -117,24 +106,58 @@ public class BookingService
             if (tour.EndDate.HasValue && tour.EndDate.Value < DateTime.UtcNow)
                 throw new AppException(HttpStatusCode.BadRequest, "TOUR_ENDED", "Tour đã kết thúc, không thể đặt.");
 
-            // M01/A4 chốt lifetime capacity: Completed vẫn chiếm chỗ, chỉ trừ Cancelled.
-            var booked = await _db.Bookings
-                .Where(b => b.TourId == req.TourId && b.Status != "Cancelled")
-                .SumAsync(b => (int?)b.Quantity) ?? 0;
-            if (tour.MaxSeats - booked < req.Quantity)
-                throw new AppException(HttpStatusCode.Conflict, "NOT_ENOUGH_SEATS", "Tour đã hết chỗ.");
-
             // C06/A1: tour không có giá hiệu lực -> 422, không tạo checkout 0đ.
             var priceFrom = PricingHelper.EffectiveMin(tour.Prices, DateTime.UtcNow);
             if (priceFrom <= 0)
                 throw new AppException(HttpStatusCode.UnprocessableEntity, "PRICE_NOT_AVAILABLE",
                     "Tour chưa có giá bán, vui lòng liên hệ.");
 
+            // F2 redesign: tính chỗ và tiền từ breakdown loại khách; fallback Quantity legacy.
+            var adultQty = Math.Max(0, req.AdultQty);
+            var childQty = Math.Max(0, req.ChildQty);
+            var supplementQty = Math.Max(0, req.SupplementQty);
+            var seatQty = adultQty + childQty;
+            var useBreakdown = seatQty > 0;
+            if (!useBreakdown) seatQty = req.Quantity;
+            if (seatQty <= 0)
+                throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Số lượng hành khách phải lớn hơn 0.");
+
+            // M01/A4 chốt lifetime capacity: Completed vẫn chiếm chỗ, chỉ trừ Cancelled.
+            var booked = await _db.Bookings
+                .Where(b => b.TourId == req.TourId && b.Status != "Cancelled")
+                .SumAsync(b => (int?)b.Quantity) ?? 0;
+            if (tour.MaxSeats - booked < seatQty)
+                throw new AppException(HttpStatusCode.Conflict, "NOT_ENOUGH_SEATS", "Tour đã hết chỗ.");
+
+            // Server tính tiền từ giá hiệu lực theo từng nguồn (không nhận giá từ client).
+            decimal amount;
+            if (useBreakdown)
+            {
+                var adultPrice = PricingHelper.EffectiveForSource(tour.Prices, DateTime.UtcNow, "Người lớn");
+                if (adultPrice <= 0) adultPrice = priceFrom;
+                var childPrice = PricingHelper.EffectiveForSource(tour.Prices, DateTime.UtcNow, "Trẻ em");
+                if (childPrice <= 0) childPrice = adultPrice;
+                var supplementPrice = PricingHelper.EffectiveForSource(tour.Prices, DateTime.UtcNow, "Phụ thu", "Phụ thu phòng");
+                amount = adultPrice * adultQty + childPrice * childQty + supplementPrice * supplementQty;
+            }
+            else
+            {
+                amount = priceFrom * seatQty;
+            }
+            if (amount <= 0)
+                throw new AppException(HttpStatusCode.UnprocessableEntity, "PRICE_NOT_AVAILABLE",
+                    "Tour chưa có giá bán, vui lòng liên hệ.");
+
             var now = DateTime.UtcNow;
             var booking = new Booking
             {
-                UserId = userId, TourId = tour.Id, BookingDate = now, Quantity = req.Quantity,
+                UserId = userId, TourId = tour.Id, BookingDate = now, Quantity = seatQty,
                 Status = "PendingPayment", CreatedAt = now,
+                // D4: snapshot mốc khởi hành của tour (kèm giờ), BE là nguồn chốt.
+                DepartureDate = tour.StartDate,
+                ContactName = Norm(req.ContactName), ContactEmail = Norm(req.ContactEmail),
+                ContactPhone = Norm(req.ContactPhone), ContactAddress = Norm(req.ContactAddress),
+                Note = Norm(req.Note),
                 TrackingTrace = JsonSerializer.Serialize(
                     new List<TrackingStepDto> { new() { Status = "PendingPayment", At = now, By = username, Note = "Tạo đơn" } }, JsonOpts)
             };
@@ -144,7 +167,7 @@ public class BookingService
             var checkout = new Checkout
             {
                 BookingId = booking.Id, PaymentMethod = req.PaymentMethod,
-                Amount = priceFrom * req.Quantity, Status = "Pending",
+                Amount = amount, Status = "Pending",
                 // N06: giữ full ref (không cắt 20 ký tự), entropy đủ, format thống nhất.
                 TransactionRef = $"MOCK-{booking.Id}-{Guid.NewGuid():N}", CreatedAt = now
             };
@@ -208,7 +231,7 @@ public class BookingService
                     $"Chỉ đơn chờ thanh toán mới trả được (hiện tại: {b.Status}).");
             b.Status = "Paid";
             if (b.Checkout is not null) b.Checkout.Status = "Paid";
-            AppendStep(b, "Paid", actorName, "Thanh toán bổ sung");
+            BookingStateMachine.AppendStep(b, "Paid", actorName, "Thanh toán bổ sung", _logger);
             b.Version++;
             // H12: audit cùng transaction — lỗi audit thì rollback cả đổi trạng thái.
             _audit.Add(actorId, "Booking.Pay", "Booking", id, "PendingPayment", "Paid");
@@ -243,6 +266,7 @@ public class BookingService
             .Select(b => new
             {
                 b.Id, b.TourId, b.UserId, b.Quantity, b.Status, b.BookingDate, b.TrackingTrace,
+                b.DepartureDate, b.ContactName, b.ContactEmail, b.ContactPhone, b.ContactAddress, b.Note,
                 TourName = b.Tour!.TourName, Username = b.User!.Username,
                 Checkout = b.Checkout == null ? null : new
                 {
@@ -255,7 +279,10 @@ public class BookingService
             Id = r.Id, TourId = r.TourId, TourName = r.TourName ?? string.Empty,
             UserId = r.UserId, Username = r.Username ?? string.Empty,
             Quantity = r.Quantity, Status = r.Status, BookingDate = r.BookingDate,
-            Tracking = ParseSteps(r.TrackingTrace),
+            DepartureDate = r.DepartureDate,
+            ContactName = r.ContactName, ContactEmail = r.ContactEmail,
+            ContactPhone = r.ContactPhone, ContactAddress = r.ContactAddress, Note = r.Note,
+            Tracking = BookingStateMachine.ParseSteps(r.TrackingTrace, _logger),
             Checkout = r.Checkout is null ? null : new CheckoutDto
             {
                 Id = r.Checkout.Id, Amount = r.Checkout.Amount, Status = r.Checkout.Status,
@@ -271,6 +298,7 @@ public class BookingService
             .Select(x => new
             {
                 x.Id, x.TourId, x.UserId, x.Quantity, x.Status, x.BookingDate, x.TrackingTrace,
+                x.DepartureDate, x.ContactName, x.ContactEmail, x.ContactPhone, x.ContactAddress, x.Note,
                 TourName = x.Tour!.TourName, Username = x.User!.Username,
                 Checkout = x.Checkout == null ? null : new
                 {
@@ -286,7 +314,10 @@ public class BookingService
             Id = b.Id, TourId = b.TourId, TourName = b.TourName ?? string.Empty,
             UserId = b.UserId, Username = b.Username ?? string.Empty,
             Quantity = b.Quantity, Status = b.Status, BookingDate = b.BookingDate,
-            Tracking = ParseSteps(b.TrackingTrace),
+            DepartureDate = b.DepartureDate,
+            ContactName = b.ContactName, ContactEmail = b.ContactEmail,
+            ContactPhone = b.ContactPhone, ContactAddress = b.ContactAddress, Note = b.Note,
+            Tracking = BookingStateMachine.ParseSteps(b.TrackingTrace, _logger),
             Checkout = b.Checkout is null ? null : new CheckoutDto
             {
                 Id = b.Checkout.Id, Amount = b.Checkout.Amount, Status = b.Checkout.Status,
@@ -304,7 +335,7 @@ public class BookingService
                 .FirstOrDefaultAsync(x => x.Id == id)
                 ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy booking.");
 
-            if (!Transitions.TryGetValue(b.Status, out var allowed) || !allowed.Contains(status))
+            if (!BookingStateMachine.CanTransition(b.Status, status))
                 throw new AppException(HttpStatusCode.BadRequest, "INVALID_STATUS_TRANSITION",
                     $"Không thể chuyển từ {b.Status} sang {status}.");
 
@@ -326,7 +357,7 @@ public class BookingService
             // A3: hủy -> checkout Refunded; complete giữ Paid.
             if (b.Checkout is not null && status == "Cancelled")
                 b.Checkout.Status = "Refunded";
-            AppendStep(b, status, actorName, note ?? string.Empty);
+            BookingStateMachine.AppendStep(b, status, actorName, note ?? string.Empty, _logger);
             b.Version++; // M12: optimistic concurrency — 2 admin cùng sửa thì 1 người 409.
             // H12: audit cùng transaction — lỗi audit thì rollback cả đổi trạng thái.
             _audit.Add(actorId, "Booking.Status", "Booking", id, old, status);
@@ -364,44 +395,6 @@ public class BookingService
         return await UpdateStatusAsync(id, "Cancelled", "Khách hủy", userId, username, isAdmin: false);
     }
 
-    private void AppendStep(Booking b, string status, string by, string note)
-    {
-        var steps = ParseSteps(b.TrackingTrace);
-        steps.Add(new TrackingStepDto { Status = status, At = DateTime.UtcNow, By = by, Note = note });
-        b.TrackingTrace = JsonSerializer.Serialize(steps, JsonOpts);
-    }
-
-    private List<TrackingStepDto> ParseSteps(string? trace)
-    {
-        if (string.IsNullOrWhiteSpace(trace)) return new();
-        try
-        {
-            return JsonSerializer.Deserialize<List<TrackingStepDto>>(trace, JsonOpts) ?? new();
-        }
-        catch (JsonException ex)
-        {
-            // M07: không nuốt lỗi parse tracking — log warning để phát hiện corrupt.
-            _logger.LogWarning(ex, "TrackingTrace corrupt ở booking");
-            return new();
-        }
-    }
-
-    private static BookingDto ToDto(Booking b)
-    {
-        var steps = new List<TrackingStepDto>();
-        try { steps = JsonSerializer.Deserialize<List<TrackingStepDto>>(b.TrackingTrace, JsonOpts) ?? new(); }
-        catch (JsonException) { steps = new(); }
-        return new BookingDto
-        {
-            Id = b.Id, TourId = b.TourId, TourName = b.Tour?.TourName ?? string.Empty,
-            UserId = b.UserId, Username = b.User?.Username ?? string.Empty,
-            Quantity = b.Quantity, Status = b.Status, BookingDate = b.BookingDate,
-            Tracking = steps,
-            Checkout = b.Checkout is null ? null : new CheckoutDto
-            {
-                Id = b.Checkout.Id, Amount = b.Checkout.Amount, Status = b.Checkout.Status,
-                PaymentMethod = b.Checkout.PaymentMethod, TransactionRef = b.Checkout.TransactionRef
-            }
-        };
-    }
+    private static string? Norm(string? s)
+        => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }

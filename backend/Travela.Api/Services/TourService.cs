@@ -37,30 +37,46 @@ public class TourService
     {
         (page, pageSize) = PaginationHelper.Normalize(page, pageSize);
         var now = DateTime.UtcNow;
+        // Không Include Bookings (nặng) — đếm chỗ theo đúng trang sau khi phân trang.
         var q = _db.Tours.AsNoTracking()
             .Include(t => t.Destination)
             .Include(t => t.Prices)
             .Include(t => t.Images)
-            .Include(t => t.Bookings)
             .AsQueryable();
         if (publicOnly) q = q.Where(t => t.Status == "Published");
         if (!string.IsNullOrWhiteSpace(status)) q = q.Where(t => t.Status == status);
         if (destinationId.HasValue) q = q.Where(t => t.DestinationId == destinationId.Value);
         if (!string.IsNullOrWhiteSpace(search)) q = q.Where(t => t.TourName.Contains(search));
 
-        // Tính priceFrom trong bộ nhớ (data BTL nhỏ). B5/NFR sẽ rà lại nếu phình.
-        var all = (await q.ToListAsync()).Select(t => BuildListDto(t, now)).ToList();
-        if (minPrice.HasValue) all = all.Where(x => x.PriceFrom >= minPrice.Value).ToList();
-        if (maxPrice.HasValue) all = all.Where(x => x.PriceFrom <= maxPrice.Value).ToList();
-        all = (sort?.ToLowerInvariant()) switch
+        var tours = await q.ToListAsync();
+        // priceFrom tính từ giá hiệu lực (data BTL nhỏ); lọc/sort theo giá trong bộ nhớ.
+        var scored = tours.Select(t => new { Tour = t, PriceFrom = ComputePriceFrom(t, now) }).ToList();
+        if (minPrice.HasValue) scored = scored.Where(x => x.PriceFrom >= minPrice.Value).ToList();
+        if (maxPrice.HasValue) scored = scored.Where(x => x.PriceFrom <= maxPrice.Value).ToList();
+        scored = (sort?.ToLowerInvariant()) switch
         {
-            "price_asc" => all.OrderBy(x => x.PriceFrom).ToList(),
-            "price_desc" => all.OrderByDescending(x => x.PriceFrom).ToList(),
-            "name" => all.OrderBy(x => x.TourName).ToList(),
-            _ => all.OrderByDescending(x => x.Id).ToList(),
+            "price_asc" => scored.OrderBy(x => x.PriceFrom).ToList(),
+            "price_desc" => scored.OrderByDescending(x => x.PriceFrom).ToList(),
+            "name" => scored.OrderBy(x => x.Tour.TourName).ToList(),
+            _ => scored.OrderByDescending(x => x.Tour.Id).ToList(),
         };
-        var items = all.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-        return PaginationHelper.ToPagedResult(items, all.Count, page, pageSize);
+        var total = scored.Count;
+        var pageTours = scored.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        // Đếm chỗ đã bán cho đúng các tour trong trang (1 query GROUP BY).
+        var ids = pageTours.Select(x => x.Tour.Id).ToList();
+        var bookedMap = ids.Count == 0
+            ? new Dictionary<int, int>()
+            : await _db.Bookings.AsNoTracking()
+                .Where(b => ids.Contains(b.TourId) && b.Status != "Cancelled")
+                .GroupBy(b => b.TourId)
+                .Select(g => new { TourId = g.Key, Sold = g.Sum(x => x.Quantity) })
+                .ToDictionaryAsync(x => x.TourId, x => x.Sold);
+
+        var items = pageTours
+            .Select(x => BuildListDto(x.Tour, now, bookedMap.GetValueOrDefault(x.Tour.Id)))
+            .ToList();
+        return PaginationHelper.ToPagedResult(items, total, page, pageSize);
     }
 
     public async Task<TourDetailDto> GetDetailAsync(int id, bool publicOnly)
@@ -78,12 +94,13 @@ public class TourService
     {
         ValidateTour(req);
         await RequireDestinationAsync(req.DestinationId);
+        await EnsurePublishableAsync(req, null);
         var t = new Tour
         {
             TourName = req.TourName.Trim(), Description = req.Description?.Trim() ?? string.Empty,
             DestinationId = req.DestinationId, MaxSeats = req.MaxSeats, Status = req.Status,
             StartDate = req.StartDate, EndDate = req.EndDate,
-            DepartureDate = req.DepartureDate, DepartureLocation = req.DepartureLocation?.Trim(),
+            DepartureLocation = req.DepartureLocation?.Trim(),
             Duration = req.Duration?.Trim(),
             Route = Norm(req.Route), Itinerary = Norm(req.Itinerary),
             Transport = Norm(req.Transport), Accommodation = Norm(req.Accommodation),
@@ -108,6 +125,7 @@ public class TourService
         await RequireDestinationAsync(req.DestinationId);
         var t = await _db.Tours.FindAsync(id)
             ?? throw new AppException(HttpStatusCode.NotFound, "NOT_FOUND", "Không tìm thấy tour.");
+        await EnsurePublishableAsync(req, id);
         // N05: không cho hạ MaxSeats dưới số đã bán (trừ Cancelled).
         var sold = await _db.Bookings.Where(b => b.TourId == id && b.Status != "Cancelled")
             .SumAsync(b => (int?)b.Quantity) ?? 0;
@@ -122,7 +140,6 @@ public class TourService
         t.Status = req.Status;
         t.StartDate = req.StartDate;
         t.EndDate = req.EndDate;
-        t.DepartureDate = req.DepartureDate;
         t.DepartureLocation = req.DepartureLocation?.Trim();
         t.Duration = req.Duration?.Trim();
         t.Route = Norm(req.Route); t.Itinerary = Norm(req.Itinerary);
@@ -381,6 +398,21 @@ public class TourService
                 throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR", $"{name} tối đa 10000 ký tự.");
     }
 
+    // Chặn publish tour thiếu ngày hoặc chưa có giá hiệu lực (tránh khách gặp 422 khi đặt).
+    private async Task EnsurePublishableAsync(CreateTourRequest req, int? tourId)
+    {
+        if (req.Status != "Published") return;
+        if (!req.StartDate.HasValue || !req.EndDate.HasValue)
+            throw new AppException(HttpStatusCode.BadRequest, "VALIDATION_ERROR",
+                "Tour Published phải có ngày bắt đầu và ngày kết thúc.");
+        var prices = tourId.HasValue
+            ? await _db.Prices.AsNoTracking().Where(p => p.TourId == tourId.Value).ToListAsync()
+            : new List<Price>();
+        if (PricingHelper.EffectiveMin(prices, DateTime.UtcNow) <= 0)
+            throw new AppException(HttpStatusCode.UnprocessableEntity, "PRICE_NOT_AVAILABLE",
+                "Tour Published phải có ít nhất một giá hiệu lực.");
+    }
+
     private static string? Norm(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private static void ValidatePrice(CreatePriceRequest req)
@@ -393,21 +425,28 @@ public class TourService
             throw new AppException(HttpStatusCode.UnprocessableEntity, "VALIDATION_ERROR", "Ngày hiệu lực không được quá khứ quá 1 ngày.");
     }
 
-    private static TourListDto BuildListDto(Tour t, DateTime now)
+    // priceFrom: ưu tiên nguồn "Người lớn", nếu không có thì min giá hiệu lực.
+    private static decimal ComputePriceFrom(Tour t, DateTime now)
     {
         var effective = PricingHelper.EffectivePrices(t.Prices, now);
+        if (effective.Count == 0) return 0;
+        return effective.FirstOrDefault(p => p.SourceName == "Người lớn")?.PriceValue
+            ?? effective.FirstOrDefault(p => p.SourceName == "người lớn")?.PriceValue
+            ?? effective.Min(p => p.PriceValue);
+    }
+
+    private static TourListDto BuildListDto(Tour t, DateTime now, int? bookedOverride = null)
+    {
         // B1/M01: lifetime capacity — Completed vẫn chiếm chỗ, chỉ trừ Cancelled.
-        var booked = t.Bookings.Where(b => b.Status != "Cancelled").Sum(b => b.Quantity);
+        // Khi list không Include Bookings thì truyền bookedOverride (đếm theo trang).
+        var booked = bookedOverride
+            ?? t.Bookings.Where(b => b.Status != "Cancelled").Sum(b => b.Quantity);
         return new TourListDto
         {
             Id = t.Id,
             TourName = t.TourName,
             Thumbnail = t.Images.OrderBy(i => i.SortOrder).FirstOrDefault()?.ImageUrl ?? string.Empty,
-            PriceFrom = effective.Count == 0
-                ? 0
-                : effective.FirstOrDefault(p => p.SourceName == "Người lớn")?.PriceValue
-                  ?? effective.FirstOrDefault(p => p.SourceName == "người lớn")?.PriceValue
-                  ?? effective.Min(p => p.PriceValue),
+            PriceFrom = ComputePriceFrom(t, now),
             Destination = t.Destination is null ? null : new DestinationBriefDto { Id = t.Destination.Id, Name = t.Destination.Name, RegionName = t.Destination.RegionName },
             Status = t.Status,
             MaxSeats = t.MaxSeats,
@@ -415,7 +454,6 @@ public class TourService
             AvailableSeats = Math.Max(0, t.MaxSeats - booked),
             StartDate = t.StartDate,
             EndDate = t.EndDate,
-            DepartureDate = t.DepartureDate,
             DepartureLocation = t.DepartureLocation,
             Duration = t.Duration
         };
@@ -430,7 +468,7 @@ public class TourService
             Destination = list.Destination, Status = list.Status,
             MaxSeats = list.MaxSeats, BookedSeats = list.BookedSeats, AvailableSeats = list.AvailableSeats,
             StartDate = list.StartDate, EndDate = list.EndDate,
-            DepartureDate = t.DepartureDate, DepartureLocation = t.DepartureLocation, Duration = t.Duration,
+            DepartureLocation = t.DepartureLocation, Duration = t.Duration,
             Description = t.Description, DestinationId = t.DestinationId,
             Route = t.Route, Itinerary = t.Itinerary,
             Transport = t.Transport, Accommodation = t.Accommodation,

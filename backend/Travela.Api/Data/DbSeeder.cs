@@ -193,7 +193,6 @@ public static class DbSeeder
         t.ApplicationConditions = s.ApplicationConditions; t.ItineraryDays = s.ItineraryDays;
         if (t.StartDate is null) t.StartDate = start;
         if (t.EndDate is null) t.EndDate = start.AddDays(Math.Max(0, s.Days - 1));
-        if (t.DepartureDate is null) t.DepartureDate = start;
         if (t.DepartureLocation is null) t.DepartureLocation = s.DepartureLocation;
         if (t.Duration is null) t.Duration = s.Duration;
     }

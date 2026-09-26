@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Phone, Mail } from "lucide-react";
 import { useToast, toastForApiError } from "../components/ui/toast";
 import { Button } from "../components/ui/button";
 import { createSupport } from "../services/supportApi";
+import { useAuth } from "../lib/auth-context";
 
 const SUBJECTS = ["Tư vấn tour", "Hỗ trợ đặt tour", "Chính sách hủy/đổi", "Khiếu nại", "Khác"];
 
 export function Contact() {
   const { push } = useToast();
+  const { user } = useAuth();
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -16,6 +18,16 @@ export function Contact() {
     content: "",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Prefill thông tin user đã đăng nhập (chỉ điền khi ô còn trống).
+  useEffect(() => {
+    if (!user) return;
+    setForm((f) => ({
+      ...f,
+      name: f.name || user.username,
+      email: f.email || user.email,
+    }));
+  }, [user]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +66,7 @@ export function Contact() {
           alt="Ruộng bậc thang"
           className="h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
       <div className="mx-auto w-full max-w-6xl px-4 py-10 md:px-6">

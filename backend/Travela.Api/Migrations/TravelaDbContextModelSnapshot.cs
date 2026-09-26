@@ -78,8 +78,30 @@ namespace Travela.Api.Migrations
                     b.Property<DateTime>("BookingDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("ContactAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DepartureDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
@@ -431,9 +453,6 @@ namespace Travela.Api.Migrations
                         .HasColumnType("varchar(500)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("DepartureDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("DepartureLocation")

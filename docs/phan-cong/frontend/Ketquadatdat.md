@@ -5,9 +5,9 @@
 
 ## Thông tin chung
 
-* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin) + agent (F4 hoàn thiện) + agent (F4.1 UI/UX)
-* Nhánh/commit: main, chưa commit/push F4.1 (chờ bạn check thủ công)
-* Ngày cập nhật: 2026-09-07 (F4.1 xong; hint demo + BE-1/BE-2 để dành)
+* Người thực hiện FE: agent (skeleton) + agent (F1 foundation + auth thật) + agent (F2 public pages) + agent (F3 admin) + agent (F4 hoàn thiện) + agent (F4.1 UI/UX) + agent (F5 rehearsal)
+* Nhánh/commit: main, chưa commit/push F5 docs (chờ bạn check thủ công)
+* Ngày cập nhật: 2026-09-07 (F5 xong; FE hoàn tất F0-F5)
 * BE đối chiếu: Health, Auth, Users, Audit (B2), Tours, Prices, Images, Destinations (B3), Bookings, Checkouts (B4), NFR + rehearsal (B5) — Swagger đủ 23 paths, k6 p95=68.79ms
 * Tài khoản test API thật: `admin/Admin123!`, `customer1/Customer123!`, `customer2/Customer123!`
 
@@ -197,20 +197,97 @@
 
 ---
 
-## F5. Polish + Demo — CHƯA
+## F5. Polish + Demo — XONG (rà soát + rehearsal fresh, chờ click tay + video)
 
-### File đã tạo/sửa (dự kiến)
+### File đã tạo/sửa
 
 | File | Hành động | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| Fix responsive/CSS | Sửa | Mobile/tablet/desktop, bảng admin scroll ngang, rà design-system | ☐ |
+| (Không sửa code) | Rà soát | 0 console.log/error; màu/radius đúng token, không gradient/glass; validation FE/BE đã trùng từ B3/B4/F2 | ☑ |
 
 ### Kết quả test
 
 | Checklist F5 | PASS/FAIL | Evidence | Ghi chú |
 |---|---|---|---|
-| Không error console, build sạch | | `npm run build` + console log ... | |
-| Mobile không vỡ | | Ảnh ... | |
-| Docker fresh demo mượt | | Video/ảnh ... | `docker compose up -d --build`, demo `localhost:3001` |
+| Không error console, build sạch | PASS | Grep 0 console.*; `npm run build` + Docker build sạch | Console browser chờ bạn F12 |
+| Mobile không vỡ | PASS (code) | Hamburger + drawer + table scroll + dialog 90vh từ F4.1 | Chờ bạn devtools/điện thoại |
+| Docker fresh demo mượt | PASS | `down -v` → `up --build`: 3 Up, health db:up, seed tours 10, Swagger 24 paths, FE 5/5 routes 200 + title đúng | Không cần `npm run dev` |
 
-**Ghi chú:** Đóng băng tính năng ở F5, chỉ fix bug.
+### DoD rehearsal fresh (2026-09-07)
+
+| Tiêu chí | Kết quả |
+|---|---|
+| 3 container Up + health db:up | PASS |
+| RBAC 401/403/400/422/409 | PASS (me 401, users-customer 403, tự khóa 400, giá sai 422, hết chỗ 409) |
+| Audit log | PASS (audit API 200, seed 0 rows đúng vì chưa thao tác) |
+| Seed tours 10 + FE demo | PASS |
+
+**Ghi chú:** Video <5p + ảnh console/mobile để bạn quay/chụp khi demo. Chưa push git (F5 không đổi code, chỉ docs).
+
+---
+
+## Đợt 2 (2026-09-21) — sửa lỗi + bổ sung CRUD user + test Playwright
+
+### File đã tạo/sửa
+
+| File | Hành động | Nội dung chính | Trạng thái |
+|---|---|---|---|
+| `src/pages/admin/Users.tsx` | Sửa | Thêm nút Thêm + dialog Sửa + nút Xóa (giữ khóa/mở nhanh) | ☑ |
+| `src/services/userApi.ts` | Sửa | `createUser`, `updateUser`, `deleteUser` | ☑ |
+| `src/pages/Register.tsx` | Sửa | Thêm field username; bỏ SĐT/họ tên/social dư | ☑ |
+| `src/pages/Login.tsx` | Sửa | Bỏ "Quên mật khẩu" + social login; xóa `ForgotPassword.tsx` + route | ☑ |
+| `src/pages/Booking.tsx`, `src/services/bookingApi.ts`, `src/types/index.ts` | Sửa | Gửi breakdown loại khách + liên hệ; tổng tiền khớp BE | ☑ |
+| `src/pages/MyBookings.tsx`, `src/pages/admin/Bookings.tsx` | Sửa | Hiển thị contact/note trong chi tiết | ☑ |
+| `src/pages/Home.tsx`, `src/pages/Contact.tsx`, `src/pages/admin/Settings.tsx` | Sửa | Bỏ gradient scrim + backdrop-blur; Contact prefill user | ☑ |
+| `src/components/layout/layouts.tsx` | Sửa | Bỏ dynamic import `tourApi` (hết cảnh báo build) | ☑ |
+| `src/components/common/common.tsx`, `src/index.css` | Sửa | `Loading` giữ chỗ, `LoadingBar`, `scrollbar-gutter: stable`; chống nháy footer | ☑ |
+| `src/pages/TourList.tsx`, `MyBookings.tsx`, `admin/{Users,Bookings,SupportRequests,AuditLogs,Tours}.tsx` | Sửa | Giữ nội dung cũ khi tải lại (chống nháy) | ☑ |
+| `src/lib/labels.ts` | Sửa | Nhãn audit `User.Create/Update/Delete` | ☑ |
+
+### Kết quả test
+
+| Checklist | PASS/FAIL | Evidence | Ghi chú |
+|---|---|---|---|
+| `npm run build` | PASS | TS sạch, không còn warning dynamic import | CSS giảm sau khi bỏ gradient |
+| Không còn UI giả | PASS | Playwright: login/register không còn Facebook/Google/Quên mật khẩu | — |
+| Đăng ký qua UI | PASS | Playwright: đăng ký tài khoản mới → về trang chủ | FE-01 |
+| Admin CRUD user | PASS | Playwright: thêm → sửa email → xóa | FE-09 |
+| Lọc tour | PASS | Playwright: tìm "Hạ Long" ra kết quả | FE-08 |
+| Đặt tour E2E | PASS | Playwright: customer đặt tour → tới `/checkout/:id` | FE-02 |
+| Docker fresh | PASS | 3 container Up, backend restarts=0 | — |
+| Playwright UI | PASS | 5/5 | `e2e/ui.spec.ts` |
+
+**Ghi chú:** Test FE dùng Playwright tại `e2e/` (chạy với Docker đang bật: FE `:3001`, BE `:5000`). Tổng đợt: 12/12 PASS (7 API + 5 UI), chạy lại trên DB fresh vẫn 12/12.
+
+---
+
+## Đợt 3 (2026-09-21) — hoàn thiện luồng đăng ký tour (ngày+giờ, địa chỉ)
+
+Kế hoạch: `docs/2/KE-HOACH-DANG-KY-TOUR.md` (Phase 1-2).
+
+### File đã tạo/sửa
+
+| File | Hành động | Nội dung chính | Trạng thái |
+|---|---|---|---|
+| `src/lib/format.ts` | Sửa | Thêm `formatDateTime`, `toLocalInput`, `fromLocalInput` (ngày + giờ) | ☑ |
+| `src/services/tourApi.ts` | Sửa | `TourForm` thêm `startDate/endDate` + 11 trường nội dung; bỏ `departureDate` | ☑ |
+| `src/pages/admin/Tours.tsx` | Sửa | Input `datetime-local` cho bắt đầu/kết thúc; 11 trường nội dung; validate ngày + độ dài | ☑ |
+| `src/types/index.ts` | Sửa | `Tour` bỏ `departureDate`; `Booking` thêm `departureDate/contactAddress` | ☑ |
+| `src/services/bookingApi.ts` | Sửa | `CreateBookingInput` thêm `contactAddress` | ☑ |
+| `src/pages/Booking.tsx` | Sửa | Gửi `contactAddress` tách khỏi `note`; hiển thị giờ khởi hành | ☑ |
+| `src/pages/Checkout.tsx`, `MyBookings.tsx`, `admin/Bookings.tsx` | Sửa | Hiển thị giờ khởi hành + địa chỉ liên hệ | ☑ |
+| `src/pages/TourDetail.tsx`, `components/common/TourCard.tsx` | Sửa | Hiển thị "Khởi hành"/"Kết thúc" kèm giờ từ `startDate/endDate` | ☑ |
+
+### Kết quả test
+
+| Checklist | PASS/FAIL | Evidence | Ghi chú |
+|---|---|---|---|
+| `npm run build` | PASS | TS sạch | — |
+| Admin sửa tour | PASS | Lưu giữ ngày+giờ; `start>=end` chặn 400; 11 trường lưu đủ | API `PUT /api/tours/1` 200 |
+| Khách đặt tour | PASS | Tiền hiển thị == `checkout.amount`; contact/địa chỉ lưu và xem lại được | AmountMatch: True |
+| Hiển thị ngày+giờ | PASS | `formatDateTime` ở TourCard/TourDetail/Booking/Checkout/MyBookings/admin | — |
+| Playwright UI | PASS | 5/5 | `e2e/ui.spec.ts` |
+| Flow lifecycle E2E (UI + auto) | PASS | Khách đặt → Paid → admin Confirmed → auto Ongoing → auto Completed; tour Hidden; tracking 5 mốc + audit system | `e2e/booking-lifecycle.spec.ts` |
+| Tổng Playwright | PASS | 13/13 (7 API + 1 lifecycle + 5 UI) | DB fresh vẫn 13/13 |
+
+**Ghi chú:** Giao diện giữ đúng design-system, không thêm gradient/kiểu mới. Chưa push git.

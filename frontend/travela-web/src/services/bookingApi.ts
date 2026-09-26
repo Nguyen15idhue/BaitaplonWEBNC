@@ -3,11 +3,25 @@ import type { Booking, Checkout, PagedResult } from "../types";
 
 // Booking + Checkout thật (B4 xong): customer tạo/xem/hủy own.
 // H08: mỗi lần bấm đặt sinh Idempotency-Key riêng — retry mạng không tạo trùng đơn.
-export async function createBooking(tourId: number, quantity: number): Promise<Booking> {
+// F2 redesign: gửi breakdown loại khách + thông tin liên hệ; BE tự tính tiền từ giá hiệu lực.
+export interface CreateBookingInput {
+  tourId: number;
+  adultQty: number;
+  childQty: number;
+  supplementQty: number;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactAddress?: string;
+  note?: string;
+  paymentMethod?: string;
+}
+
+export async function createBooking(input: CreateBookingInput): Promise<Booking> {
   const key = crypto.randomUUID();
   const res = await api.post<Booking>(
     "/bookings",
-    { tourId, quantity, paymentMethod: "Mock" },
+    { paymentMethod: "Mock", ...input },
     { headers: { "Idempotency-Key": key } },
   );
   return res.data;

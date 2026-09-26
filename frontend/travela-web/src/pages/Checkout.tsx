@@ -5,7 +5,7 @@ import type { Booking } from "../types";
 import { Loading, ErrorState, PageHeader } from "../components/common/common";
 import { Card, Badge } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { formatVND, bookingTone } from "../lib/format";
+import { formatVND, bookingTone, formatDateTime } from "../lib/format";
 import { label, BOOKING_STATUS_LABEL } from "../lib/labels";
 
 export function CheckoutPage() {
@@ -31,7 +31,13 @@ export function CheckoutPage() {
         <Card>
           <h2 className="mb-2 text-sm font-semibold text-[#0F172A]">Thông tin đặt tour</h2>
           <p className="text-sm">Tour: {booking.tourName}</p>
+          {booking.departureDate && <p className="text-sm">Khởi hành: {formatDateTime(booking.departureDate)}</p>}
           <p className="text-sm">Số lượng: {booking.quantity}</p>
+          {booking.contactName && <p className="text-sm">Người đặt: {booking.contactName}</p>}
+          {booking.contactEmail && <p className="text-sm">Email: {booking.contactEmail}</p>}
+          {booking.contactPhone && <p className="text-sm">SĐT: {booking.contactPhone}</p>}
+          {booking.contactAddress && <p className="text-sm">Địa chỉ: {booking.contactAddress}</p>}
+          {booking.note && <p className="text-sm">Ghi chú: {booking.note}</p>}
           <p className="text-sm">
             Trạng thái: <Badge tone={bookingTone(booking.status)}>{label(BOOKING_STATUS_LABEL, booking.status)}</Badge>
           </p>
